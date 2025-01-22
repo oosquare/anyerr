@@ -1,0 +1,49 @@
+name: Check
+
+on:
+  - push
+  - pull_request
+
+env:
+  DEV_SHELL_NAME: ci
+  CARGO_TERM_COLOR: always
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Nix
+        uses: aldoborrero/use-nix-action@v4
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+  check:
+    runs-on: ubuntu-latest
+    needs: setup
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Check
+        run: |
+          cargo check
+          cargo clippy
+
+      - name: Format
+        run: cargo fmt --all -- --check
+
+  test:
+    runs-on: ubuntu-latest
+    needs: setup
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Test
+        run: cargo test

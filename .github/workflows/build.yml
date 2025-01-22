@@ -1,0 +1,44 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - stable
+  pull_request:
+    branches:
+      - stable
+
+env:
+  DEV_SHELL_NAME: ci
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Nix
+        uses: nixbuild/nix-quick-install-action@v28
+
+      - name: Cache Nix Store
+        uses: nix-community/cache-nix-action@v5.2.1
+        with:
+          primary-key: nix-build-${{ runner.os }}-${{ hashFiles('**/*.nix') }}
+          restore-prefixes-first-match: nix-build-${{ runner.os }}-
+          gc-max-store-size-linux: 1073741824
+          purge: true
+          purge-prefixes: cache-${{ runner.os }}-
+          purge-created: 0
+          purge-primary-key: never
+
+      - name: Build
+        run: nix build .#to-concentrate
+
+      - name: Show Client
+        run: ./result/bin/to-concentrate --version
+
+      - name: Show Daemon
+        run: ./result/bin/to-concentrate-daemon --version

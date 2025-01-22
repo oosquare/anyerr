@@ -1,0 +1,7 @@
+[package]
+name = "rsudoku"
+version = "0.1.0"
+edition = "2021"
+description = "Full-featured sudoku game and solver implemented in Rust"
+
+[dependencies]
