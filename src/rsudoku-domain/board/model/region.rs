@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 use std::ops::Range;
 
-use crate::domain::board::model::Position;
+use crate::board::model::Position;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RegionKind {

@@ -79,7 +79,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rsudoku"
+name = "rsudoku-domain"
 version = "0.1.0"
 dependencies = [
  "enum_dispatch",

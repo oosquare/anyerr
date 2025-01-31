@@ -1,10 +1,16 @@
-[package]
-name = "rsudoku"
+[workspace]
+members = [
+  "src/rsudoku-domain"
+]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2021"
-description = "Full-featured sudoku game and solver implemented in Rust"
+license = "GPL-3.0-or-later"
+authors = ["Justin Chen oosquare@outlook.com"]
+repository = "https://github.com/oosquare/rsudoku"
 
-[dependencies]
+[workspace.dependencies]
 enum_dispatch = "0.3.13"
 getset = "0.1.4"
 snafu = "0.8.5"
