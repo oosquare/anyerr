@@ -5,3 +5,6 @@ edition = "2021"
 description = "Full-featured sudoku game and solver implemented in Rust"
 
 [dependencies]
+enum_dispatch = "0.3.13"
+getset = "0.1.4"
+snafu = "0.8.5"
