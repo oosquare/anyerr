@@ -295,6 +295,7 @@ impl Iterator for BoxRegionIter {
 
 impl RegionIter for BoxRegionIter {}
 
+#[cfg(test)]
 mod tests {
     use std::collections::HashSet;
 

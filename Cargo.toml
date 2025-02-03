@@ -1,7 +1,9 @@
 [workspace]
 members = [
-  "src/rsudoku-domain"
+  "src/rsudoku-domain",
+  "src/rsudoku-util"
 ]
+resolver = "2"
 
 [workspace.package]
 version = "0.1.0"

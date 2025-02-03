@@ -88,6 +88,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rsudoku-util"
+version = "0.1.0"
+dependencies = [
+ "enum_dispatch",
+ "getset",
+ "snafu",
+]
+
+[[package]]
 name = "snafu"
 version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
