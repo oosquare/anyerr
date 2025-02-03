@@ -1,13 +1,18 @@
 use std::any::{Any, TypeId};
 use std::backtrace::Backtrace;
 use std::error::Error;
-use std::fmt::{Display, Formatter, Result as FmtResult};
+use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
 use super::context::{ContextDepth, ContextIter};
 use super::data::ErrorData;
-use super::ContextMap;
+use super::kind::AnyErrorKind;
+use super::{ContextMap, ErrorDataBuilder};
 
 pub trait ErrorExt: Error {
+    type ErrorKind: AnyErrorKind;
+
+    fn kind(&self) -> Self::ErrorKind;
+
     fn message(&self) -> String;
 
     fn backtrace(&self) -> &Backtrace;
@@ -16,20 +21,44 @@ pub trait ErrorExt: Error {
 }
 
 #[derive(Debug)]
-pub struct AnyError {
-    data: Box<ErrorData>,
+pub struct AnyError<K>
+where
+    K: AnyErrorKind + 'static,
+{
+    data: Box<ErrorData<K>>,
 }
 
-impl AnyError {
+impl<K> AnyError<K>
+where
+    K: AnyErrorKind + 'static,
+{
+    pub fn minimal<S: Into<String>>(message: S) -> Self {
+        Self::from(ErrorData::<K>::Simple {
+            kind: K::default(),
+            message: message.into(),
+            backtrace: Backtrace::capture(),
+            context: ContextMap::new(),
+        })
+    }
+
+    pub fn quick<S: Into<String>>(message: S, kind: K) -> Self {
+        Self::from(ErrorData::<K>::Simple {
+            kind,
+            message: message.into(),
+            backtrace: Backtrace::capture(),
+            context: ContextMap::new(),
+        })
+    }
+
     pub fn wrap<E>(err: E) -> Self
     where
         E: Error + Any + Send + Sync,
     {
         let err: Box<dyn ErrorAndAny> = Box::new(err);
-        if err.as_any().is::<AnyError>() {
+        if err.as_any().is::<Self>() {
             *err.as_any_boxed()
-                .downcast::<AnyError>()
-                .expect("`err` should be `Box<AnyError>`")
+                .downcast::<Self>()
+                .expect("`err` should be `Box<Self>`")
         } else {
             let data = ErrorData::Wrapped {
                 backtrace: Backtrace::capture(),
@@ -37,6 +66,10 @@ impl AnyError {
             };
             Self::from(data)
         }
+    }
+
+    pub fn builder() -> AnyErrorBuilder<K> {
+        AnyErrorBuilder::new()
     }
 
     pub fn is<E>(&self) -> bool
@@ -104,37 +137,45 @@ impl AnyError {
     }
 }
 
-impl<S: Into<String>> From<S> for AnyError {
-    fn from(message: S) -> Self {
-        Self::from(ErrorData::Simple {
-            message: message.into(),
-            backtrace: Backtrace::capture(),
-            context: ContextMap::new(),
-        })
-    }
-}
-
-impl From<ErrorData> for AnyError {
-    fn from(data: ErrorData) -> Self {
+impl<K> From<ErrorData<K>> for AnyError<K>
+where
+    K: AnyErrorKind,
+{
+    fn from(data: ErrorData<K>) -> Self {
         Self {
             data: Box::new(data),
         }
     }
 }
 
-impl Display for AnyError {
+impl<K> Display for AnyError<K>
+where
+    K: AnyErrorKind,
+{
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        self.data.fmt(f)
+        Display::fmt(&self.data, f)
     }
 }
 
-impl Error for AnyError {
+impl<K> Error for AnyError<K>
+where
+    K: AnyErrorKind,
+{
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         self.data.source()
     }
 }
 
-impl ErrorExt for AnyError {
+impl<K> ErrorExt for AnyError<K>
+where
+    K: AnyErrorKind,
+{
+    type ErrorKind = K;
+
+    fn kind(&self) -> Self::ErrorKind {
+        self.data.kind()
+    }
+
     fn message(&self) -> String {
         self.data.message()
     }
@@ -170,28 +211,80 @@ impl<E: Error + Any + Send + Sync> ErrorAndAny for E {
     }
 }
 
+pub struct AnyErrorBuilder<K>(ErrorDataBuilder<K>)
+where
+    K: AnyErrorKind + 'static;
+
+impl<K> AnyErrorBuilder<K>
+where
+    K: AnyErrorKind + 'static,
+{
+    fn new() -> Self {
+        Self(ErrorDataBuilder::new())
+    }
+
+    pub fn kind(self, kind: K) -> Self {
+        Self(self.0.kind(kind))
+    }
+
+    pub fn message<S: Into<String>>(self, message: S) -> Self {
+        Self(self.0.message(message))
+    }
+
+    pub fn context<V: Debug>(self, name: &str, value: &V) -> Self {
+        Self(self.0.context(name, value))
+    }
+
+    pub fn source(self, source: AnyError<K>) -> Self {
+        Self(self.0.source(source))
+    }
+
+    pub fn build(self) -> AnyError<K> {
+        AnyError::from(self.0.build(Backtrace::capture()))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::num::ParseIntError;
 
+    use crate::error::context::ContextMap;
+    use crate::error::kind::DefaultAnyErrorKind;
+
     use super::*;
 
+    type DefaultAnyError = AnyError<DefaultAnyErrorKind>;
+    type DefaultErrorData = ErrorData<DefaultAnyErrorKind>;
+
     #[test]
-    fn any_error_from_string_succeeds() {
-        let err = AnyError::from("error");
-        assert_eq!(err.to_string(), "error");
+    fn any_error_builder_succeeds() {
+        let inner = "-1".parse::<u32>().unwrap_err();
+        let source = DefaultAnyError::wrap(inner);
+
+        let err = DefaultAnyError::builder()
+            .kind(DefaultAnyErrorKind::ValueValidation)
+            .message("could not parse `&str` to `u32`")
+            .context("string", &"-1")
+            .context("target-type", &"u32")
+            .source(source)
+            .build();
+
+        assert_eq!(err.kind(), DefaultAnyErrorKind::ValueValidation);
+        assert_eq!(err.to_string(), "could not parse `&str` to `u32`");
+        assert_eq!(err.context(ContextDepth::All).count(), 2);
+        assert!(err.source().is_some());
     }
 
     #[test]
     fn any_error_wrap_succeeds() {
         {
             let inner = "".parse::<u32>().unwrap_err();
-            let err = AnyError::wrap(inner.clone());
+            let err = DefaultAnyError::wrap(inner.clone());
             assert_eq!(err.to_string(), inner.to_string());
         }
         {
-            let inner = AnyError::from("error");
-            let err = AnyError::wrap(inner);
+            let inner = DefaultAnyError::minimal("error");
+            let err = DefaultAnyError::wrap(inner);
             assert!(err.source().is_none());
         }
     }
@@ -199,25 +292,26 @@ mod tests {
     #[test]
     fn any_error_downcast_succeeds() {
         {
-            let mut err = AnyError::from("error");
-            assert!(err.downcast_ref::<AnyError>().is_some());
-            assert!(err.downcast_mut::<AnyError>().is_some());
-            assert!(err.downcast::<AnyError>().is_ok());
+            let mut err = DefaultAnyError::minimal("error");
+            assert!(err.downcast_ref::<DefaultAnyError>().is_some());
+            assert!(err.downcast_mut::<DefaultAnyError>().is_some());
+            assert!(err.downcast::<DefaultAnyError>().is_ok());
         }
         {
-            let source = AnyError::from("inner");
-            let mut err = AnyError::from(ErrorData::Layered {
+            let source = DefaultAnyError::minimal("inner");
+            let mut err = DefaultAnyError::from(DefaultErrorData::Layered {
+                kind: DefaultAnyErrorKind::Unknown,
                 message: "error".into(),
                 context: ContextMap::new(),
                 source,
             });
-            assert!(err.downcast_ref::<AnyError>().is_some());
-            assert!(err.downcast_mut::<AnyError>().is_some());
-            assert!(err.downcast::<AnyError>().is_ok());
+            assert!(err.downcast_ref::<DefaultAnyError>().is_some());
+            assert!(err.downcast_mut::<DefaultAnyError>().is_some());
+            assert!(err.downcast::<DefaultAnyError>().is_ok());
         }
         {
             let inner = "".parse::<u32>().unwrap_err();
-            let mut err = AnyError::wrap(inner);
+            let mut err = DefaultAnyError::wrap(inner);
             assert!(err.downcast_ref::<ParseIntError>().is_some());
             assert!(err.downcast_mut::<ParseIntError>().is_some());
             assert!(err.downcast::<ParseIntError>().is_ok());
@@ -230,7 +324,7 @@ mod tests {
             val.parse()
         }
 
-        fn try_increment(val: &str) -> Result<u32, AnyError> {
+        fn try_increment(val: &str) -> Result<u32, DefaultAnyError> {
             let val = try_parse(val).map_err(AnyError::wrap)?;
             Ok(val + 1)
         }
