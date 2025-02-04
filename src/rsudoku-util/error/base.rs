@@ -3,38 +3,39 @@ use std::backtrace::Backtrace;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
-use super::context::{ContextDepth, ContextIter};
-use super::data::ErrorData;
+use super::context::{AbstractContext, Context, ContextDepth, StringMapContext};
+use super::data::{ErrorData, ErrorDataBuilder};
 use super::kind::Kind;
-use super::{ContextMap, ErrorDataBuilder};
 
 #[derive(Debug)]
-pub struct AnyError<K>
+pub struct AnyError<C, K>
 where
+    C: AbstractContext + 'static,
     K: Kind + 'static,
 {
-    data: Box<ErrorData<K>>,
+    data: Box<ErrorData<C, K>>,
 }
 
-impl<K> AnyError<K>
+impl<C, K> AnyError<C, K>
 where
+    C: AbstractContext + 'static,
     K: Kind + 'static,
 {
     pub fn minimal<S: Into<String>>(message: S) -> Self {
-        Self::from(ErrorData::<K>::Simple {
+        Self::from(ErrorData::<C, K>::Simple {
             kind: K::default(),
             message: message.into(),
             backtrace: Backtrace::capture(),
-            context: ContextMap::new(),
+            context: C::default(),
         })
     }
 
     pub fn quick<S: Into<String>>(message: S, kind: K) -> Self {
-        Self::from(ErrorData::<K>::Simple {
+        Self::from(ErrorData::<C, K>::Simple {
             kind,
             message: message.into(),
             backtrace: Backtrace::capture(),
-            context: ContextMap::new(),
+            context: C::default(),
         })
     }
 
@@ -56,7 +57,7 @@ where
         }
     }
 
-    pub fn builder() -> AnyErrorBuilder<K> {
+    pub fn builder() -> AnyErrorBuilder<C, K> {
         AnyErrorBuilder::new()
     }
 
@@ -70,10 +71,6 @@ where
 
     pub fn backtrace(&self) -> &Backtrace {
         self.data.backtrace()
-    }
-
-    pub fn context(&self, depth: ContextDepth) -> ContextIter {
-        self.data.context(depth)
     }
 
     pub fn is<E>(&self) -> bool
@@ -141,29 +138,42 @@ where
     }
 }
 
-impl<K> From<ErrorData<K>> for AnyError<K>
+impl<C, K> AnyError<C, K>
 where
-    K: Kind,
+    C: Context + 'static,
+    K: Kind + 'static,
 {
-    fn from(data: ErrorData<K>) -> Self {
+    pub fn context<'a>(&'a self, depth: ContextDepth) -> C::Iter<'a> {
+        self.data.context(depth)
+    }
+}
+
+impl<C, K> From<ErrorData<C, K>> for AnyError<C, K>
+where
+    C: AbstractContext + 'static,
+    K: Kind + 'static,
+{
+    fn from(data: ErrorData<C, K>) -> Self {
         Self {
             data: Box::new(data),
         }
     }
 }
 
-impl<K> Display for AnyError<K>
+impl<C, K> Display for AnyError<C, K>
 where
-    K: Kind,
+    C: AbstractContext + 'static,
+    K: Kind + 'static,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         Display::fmt(&self.data, f)
     }
 }
 
-impl<K> Error for AnyError<K>
+impl<C, K> Error for AnyError<C, K>
 where
-    K: Kind,
+    C: AbstractContext + 'static,
+    K: Kind + 'static,
 {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         self.data.source()
@@ -192,12 +202,14 @@ impl<E: Error + Any + Send + Sync> ErrorAndAny for E {
     }
 }
 
-pub struct AnyErrorBuilder<K>(ErrorDataBuilder<K>)
+pub struct AnyErrorBuilder<C, K>(ErrorDataBuilder<C, K>)
 where
+    C: AbstractContext + 'static,
     K: Kind + 'static;
 
-impl<K> AnyErrorBuilder<K>
+impl<C, K> AnyErrorBuilder<C, K>
 where
+    C: AbstractContext + 'static,
     K: Kind + 'static,
 {
     fn new() -> Self {
@@ -212,16 +224,26 @@ where
         Self(self.0.message(message))
     }
 
-    pub fn context<V: Debug>(self, name: &str, value: &V) -> Self {
-        Self(self.0.context(name, value))
-    }
-
-    pub fn source(self, source: AnyError<K>) -> Self {
+    pub fn source(self, source: AnyError<C, K>) -> Self {
         Self(self.0.source(source))
     }
 
-    pub fn build(self) -> AnyError<K> {
+    pub fn build(self) -> AnyError<C, K> {
         AnyError::from(self.0.build(Backtrace::capture()))
+    }
+}
+
+impl<C, K> AnyErrorBuilder<C, K>
+where
+    C: Context + 'static,
+    K: Kind + 'static,
+{
+    pub fn context<Q, V>(self, name: Q, value: V) -> Self
+    where
+        Q: Into<C::Key>,
+        V: Into<C::Value>,
+    {
+        Self(self.0.context(name, value))
     }
 }
 
@@ -229,13 +251,13 @@ where
 mod tests {
     use std::num::ParseIntError;
 
-    use crate::error::context::ContextMap;
+    use crate::error::context::StringMapContext;
     use crate::error::kind::DefaultAnyErrorKind;
 
     use super::*;
 
-    type DefaultAnyError = AnyError<DefaultAnyErrorKind>;
-    type DefaultErrorData = ErrorData<DefaultAnyErrorKind>;
+    type DefaultAnyError = AnyError<StringMapContext, DefaultAnyErrorKind>;
+    type DefaultErrorData = ErrorData<StringMapContext, DefaultAnyErrorKind>;
 
     #[test]
     fn any_error_builder_succeeds() {
@@ -245,8 +267,8 @@ mod tests {
         let err = DefaultAnyError::builder()
             .kind(DefaultAnyErrorKind::ValueValidation)
             .message("could not parse `&str` to `u32`")
-            .context("string", &"-1")
-            .context("target-type", &"u32")
+            .context("string", "-1")
+            .context("target-type", String::from("u32"))
             .source(source)
             .build();
 
@@ -283,7 +305,7 @@ mod tests {
             let mut err = DefaultAnyError::from(DefaultErrorData::Layered {
                 kind: DefaultAnyErrorKind::Unknown,
                 message: "error".into(),
-                context: ContextMap::new(),
+                context: StringMapContext::new(),
                 source,
             });
             assert!(err.downcast_ref::<DefaultAnyError>().is_some());

@@ -3,25 +3,26 @@ use std::error::Error;
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
 use super::base::AnyError;
-use super::context::{ContextDepth, ContextEntry, ContextIter, ContextMap};
+use super::context::{AbstractContext, Context, ContextDepth, Iter, StringMapContext};
 use super::kind::Kind;
 
 #[derive(Debug)]
-pub(super) enum ErrorData<K>
+pub(super) enum ErrorData<C, K>
 where
+    C: AbstractContext + 'static,
     K: Kind + 'static,
 {
     Simple {
         kind: K,
         message: String,
         backtrace: Backtrace,
-        context: ContextMap,
+        context: C,
     },
     Layered {
         kind: K,
         message: String,
-        context: ContextMap,
-        source: AnyError<K>,
+        context: C,
+        source: AnyError<C, K>,
     },
     Wrapped {
         backtrace: Backtrace,
@@ -29,8 +30,9 @@ where
     },
 }
 
-impl<K> ErrorData<K>
+impl<C, K> ErrorData<C, K>
 where
+    C: AbstractContext + 'static,
     K: Kind + 'static,
 {
     pub fn kind(&self) -> K {
@@ -56,8 +58,14 @@ where
             Self::Wrapped { backtrace, .. } => backtrace,
         }
     }
+}
 
-    pub fn context(&self, depth: ContextDepth) -> ContextIter {
+impl<C, K> ErrorData<C, K>
+where
+    C: Context + 'static,
+    K: Kind + 'static,
+{
+    pub fn context<'a>(&'a self, depth: ContextDepth) -> C::Iter<'a> {
         match self {
             Self::Simple { context, .. } => context.iter(),
             Self::Layered {
@@ -66,13 +74,14 @@ where
                 ContextDepth::All => source.context(depth).concat(context),
                 ContextDepth::Shallowest => context.iter(),
             },
-            Self::Wrapped { .. } => ContextIter::new(),
+            Self::Wrapped { .. } => C::Iter::default(),
         }
     }
 }
 
-impl<K> Display for ErrorData<K>
+impl<C, K> Display for ErrorData<C, K>
 where
+    C: AbstractContext + 'static,
     K: Kind + 'static,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
@@ -84,8 +93,9 @@ where
     }
 }
 
-impl<K> Error for ErrorData<K>
+impl<C, K> Error for ErrorData<C, K>
 where
+    C: AbstractContext + 'static,
     K: Kind + 'static,
 {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
@@ -97,25 +107,27 @@ where
     }
 }
 
-pub(super) struct ErrorDataBuilder<K>
+pub(super) struct ErrorDataBuilder<C, K>
 where
+    C: AbstractContext + 'static,
     K: Kind + 'static,
 {
     kind: K,
     message: String,
-    context: Vec<ContextEntry>,
-    source: Option<AnyError<K>>,
+    context: C,
+    source: Option<AnyError<C, K>>,
 }
 
-impl<K> ErrorDataBuilder<K>
+impl<C, K> ErrorDataBuilder<C, K>
 where
-    K: Kind,
+    C: AbstractContext + 'static,
+    K: Kind + 'static,
 {
     pub fn new() -> Self {
         Self {
             kind: K::default(),
             message: String::new(),
-            context: Vec::new(),
+            context: C::default(),
             source: None,
         }
     }
@@ -130,17 +142,12 @@ where
         self
     }
 
-    pub fn context<V: Debug>(mut self, name: &str, value: &V) -> Self {
-        self.context.push(ContextEntry::new(name, value));
-        self
-    }
-
-    pub fn source(mut self, source: AnyError<K>) -> Self {
+    pub fn source(mut self, source: AnyError<C, K>) -> Self {
         self.source = Some(source);
         self
     }
 
-    pub fn build(self, backtrace: Backtrace) -> ErrorData<K> {
+    pub fn build(self, backtrace: Backtrace) -> ErrorData<C, K> {
         match self.source {
             Some(source) => ErrorData::Layered {
                 kind: self.kind,
@@ -158,14 +165,31 @@ where
     }
 }
 
+impl<C, K> ErrorDataBuilder<C, K>
+where
+    C: Context + 'static,
+    K: Kind + 'static,
+{
+    pub fn context<Q, V>(mut self, name: Q, value: V) -> Self
+    where
+        Q: Into<C::Key>,
+        V: Into<C::Value>,
+    {
+        self.context.insert(name, value);
+        self
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use crate::error::context::Entry;
     use crate::error::kind::DefaultAnyErrorKind;
+    use crate::error::string_map::StringMapEntry;
 
     use super::*;
 
-    type DefaultErrorData = ErrorData<DefaultAnyErrorKind>;
-    type DefaultErrorDataBuilder = ErrorDataBuilder<DefaultAnyErrorKind>;
+    type DefaultErrorData = ErrorData<StringMapContext, DefaultAnyErrorKind>;
+    type DefaultErrorDataBuilder = ErrorDataBuilder<StringMapContext, DefaultAnyErrorKind>;
 
     #[test]
     fn error_data_message_succeeds() {
@@ -174,7 +198,7 @@ mod tests {
                 kind: DefaultAnyErrorKind::Unknown,
                 message: "simple".into(),
                 backtrace: Backtrace::capture(),
-                context: ContextMap::new(),
+                context: StringMapContext::new(),
             };
             assert_eq!(data.message(), "simple");
             assert_eq!(data.to_string(), "simple");
@@ -183,12 +207,12 @@ mod tests {
             let data = DefaultErrorData::Layered {
                 kind: DefaultAnyErrorKind::Unknown,
                 message: "layered".into(),
-                context: ContextMap::new(),
+                context: StringMapContext::new(),
                 source: AnyError::from(DefaultErrorData::Simple {
                     kind: DefaultAnyErrorKind::Unknown,
                     message: "simple".into(),
                     backtrace: Backtrace::capture(),
-                    context: ContextMap::new(),
+                    context: StringMapContext::new(),
                 }),
             };
             assert_eq!(data.message(), "layered");
@@ -211,37 +235,37 @@ mod tests {
                 kind: DefaultAnyErrorKind::Unknown,
                 message: "simple".into(),
                 backtrace: Backtrace::capture(),
-                context: ContextMap::from(vec![ContextEntry::new("name", &1)]),
+                context: StringMapContext::from(vec![("key", "1")]),
             };
 
             let mut iter = data.context(ContextDepth::All);
-            assert_eq!(iter.next(), Some(&ContextEntry::new("name", &1)));
+            assert_eq!(iter.next(), Some(&StringMapEntry::new("key", "1")));
             assert_eq!(iter.next(), None);
 
             let mut iter = data.context(ContextDepth::Shallowest);
-            assert_eq!(iter.next(), Some(&ContextEntry::new("name", &1)));
+            assert_eq!(iter.next(), Some(&StringMapEntry::new("key", "1")));
             assert_eq!(iter.next(), None);
         }
         {
             let data = DefaultErrorData::Layered {
                 kind: DefaultAnyErrorKind::Unknown,
                 message: "layered".into(),
-                context: ContextMap::from(vec![ContextEntry::new("name2", &2)]),
+                context: StringMapContext::from(vec![("key2", "2")]),
                 source: AnyError::from(DefaultErrorData::Simple {
                     kind: DefaultAnyErrorKind::Unknown,
                     message: "simple".into(),
                     backtrace: Backtrace::capture(),
-                    context: ContextMap::from(vec![ContextEntry::new("name1", &1)]),
+                    context: StringMapContext::from(vec![("key1", "1")]),
                 }),
             };
 
             let mut iter = data.context(ContextDepth::All);
-            assert_eq!(iter.next(), Some(&ContextEntry::new("name2", &2)));
-            assert_eq!(iter.next(), Some(&ContextEntry::new("name1", &1)));
+            assert_eq!(iter.next(), Some(&StringMapEntry::new("key2", "2")));
+            assert_eq!(iter.next(), Some(&StringMapEntry::new("key1", "1")));
             assert_eq!(iter.next(), None);
 
             let mut iter = data.context(ContextDepth::Shallowest);
-            assert_eq!(iter.next(), Some(&ContextEntry::new("name2", &2)));
+            assert_eq!(iter.next(), Some(&StringMapEntry::new("key2", "2")));
             assert_eq!(iter.next(), None);
         }
         {
@@ -264,7 +288,7 @@ mod tests {
             let data = DefaultErrorDataBuilder::new()
                 .kind(DefaultAnyErrorKind::ValueValidation)
                 .message("simple")
-                .context("name", &1)
+                .context("key", "1")
                 .build(Backtrace::capture());
             assert!(matches!(data, ErrorData::Simple { .. }));
             assert_eq!(data.kind(), DefaultAnyErrorKind::ValueValidation);
@@ -272,12 +296,12 @@ mod tests {
         {
             let data = DefaultErrorDataBuilder::new()
                 .message("layered")
-                .context("name", &1)
+                .context("key", "1")
                 .source(AnyError::from(DefaultErrorData::Simple {
                     kind: DefaultAnyErrorKind::Unknown,
                     message: "simple".into(),
                     backtrace: Backtrace::capture(),
-                    context: ContextMap::from(vec![ContextEntry::new("name1", &1)]),
+                    context: StringMapContext::from(vec![("key1", "1")]),
                 }))
                 .build(Backtrace::capture());
             assert_eq!(data.kind(), DefaultAnyErrorKind::default());

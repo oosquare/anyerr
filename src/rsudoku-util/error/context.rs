@@ -1,135 +1,12 @@
-use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
-use std::slice::Iter;
+pub mod string_map;
+pub mod unit;
 
-use getset::Getters;
+pub use string_map::StringMapContext;
+pub use unit::UnitContext;
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Getters)]
-#[getset(get = "pub")]
-pub struct ContextEntry {
-    content: String,
-    name_len: usize,
-}
-
-impl ContextEntry {
-    pub(super) fn new<V: Debug>(name: &str, value: &V) -> Self {
-        Self {
-            content: format!("{name}{value:?}"),
-            name_len: name.len(),
-        }
-    }
-
-    pub fn name(&self) -> &str {
-        self.split_content().0
-    }
-
-    pub fn value(&self) -> &str {
-        self.split_content().1
-    }
-
-    fn split_content(&self) -> (&str, &str) {
-        self.content.split_at(self.name_len)
-    }
-}
-
-impl Debug for ContextEntry {
-    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        let (name, value) = self.split_content();
-        f.debug_struct("ContextEntry")
-            .field("name", &name)
-            .field("value", &value)
-            .finish()
-    }
-}
-
-impl Display for ContextEntry {
-    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        let (name, value) = self.split_content();
-        write!(f, "{name} = {value}")
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ContextMap {
-    entries: Vec<ContextEntry>,
-}
-
-impl ContextMap {
-    pub fn new() -> Self {
-        Self {
-            entries: Vec::new(),
-        }
-    }
-
-    pub fn iter(&self) -> ContextIter {
-        self.entries.iter().into()
-    }
-}
-
-impl From<Vec<ContextEntry>> for ContextMap {
-    fn from(entries: Vec<ContextEntry>) -> Self {
-        Self { entries }
-    }
-}
-
-impl FromIterator<ContextEntry> for ContextMap {
-    fn from_iter<T: IntoIterator<Item = ContextEntry>>(iter: T) -> Self {
-        Self {
-            entries: iter.into_iter().collect(),
-        }
-    }
-}
-
-pub enum ContextIter<'a> {
-    Node {
-        iter: Iter<'a, ContextEntry>,
-        next: Option<Box<ContextIter<'a>>>,
-    },
-    None,
-}
-
-impl<'a> ContextIter<'a> {
-    pub(super) fn new() -> Self {
-        Self::None
-    }
-
-    pub(super) fn concat(self, context: &'a ContextMap) -> Self {
-        if context.entries.is_empty() {
-            return self;
-        }
-        let iter = context.entries.iter();
-        if let Self::None = self {
-            Self::Node { iter, next: None }
-        } else {
-            Self::Node {
-                iter,
-                next: Some(Box::new(self)),
-            }
-        }
-    }
-}
-
-impl<'a> From<Iter<'a, ContextEntry>> for ContextIter<'a> {
-    fn from(iter: Iter<'a, ContextEntry>) -> Self {
-        Self::Node { iter, next: None }
-    }
-}
-
-impl<'a> Iterator for ContextIter<'a> {
-    type Item = &'a ContextEntry;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        while let Self::Node { iter, next } = self {
-            if let Some(item) = iter.next() {
-                return Some(item);
-            } else if let Some(next) = next.take() {
-                *self = *next;
-            } else {
-                *self = Self::None;
-            }
-        }
-        None
-    }
-}
+use std::borrow::Borrow;
+use std::fmt::{Debug, Display};
+use std::hash::Hash;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ContextDepth {
@@ -137,73 +14,57 @@ pub enum ContextDepth {
     Shallowest,
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub trait AbstractContext: Default + Debug {
+    type Key;
 
-    #[test]
-    fn context_entry_getter_succeeds() {
-        {
-            let entry = ContextEntry::new("name", &1);
-            assert_eq!("name", entry.name());
-            assert_eq!(r#"1"#, entry.value());
-        }
-        {
-            let entry = ContextEntry::new("name", &"&str value");
-            assert_eq!("name", entry.name());
-            assert_eq!(r#""&str value""#, entry.value());
-        }
-        {
-            let entry = ContextEntry::new("name", &String::from("String value"));
-            assert_eq!("name", entry.name());
-            assert_eq!(r#""String value""#, entry.value());
-        }
-    }
+    type Value;
 
-    #[test]
-    fn context_entry_to_string_succeeds() {
-        {
-            let entry = ContextEntry::new("name", &1);
-            assert_eq!(r#"name = 1"#, entry.to_string());
-        }
-        {
-            let entry = ContextEntry::new("name", &"&str value");
-            assert_eq!(r#"name = "&str value""#, entry.to_string());
-        }
+    type Entry: Entry<Key = Self::Key, Value = Self::Value>;
 
-        {
-            let entry = ContextEntry::new("name", &String::from("String value"));
-            assert_eq!(r#"name = "String value""#, entry.to_string());
-        }
-    }
+    type Iter<'a>: Iter<'a, Context = Self, Entry = Self::Entry>
+    where
+        Self: 'a;
 
-    #[test]
-    fn context_iter_from_succeeds() {
-        let context = ContextMap::from(vec![
-            ContextEntry::new("name1", &1),
-            ContextEntry::new("name2", &"2"),
-        ]);
-        let mut iter = context.iter();
-        assert_eq!(Some(&ContextEntry::new("name1", &1)), iter.next());
-        assert_eq!(Some(&ContextEntry::new("name2", &"2")), iter.next());
-        assert_eq!(None, iter.next());
-    }
+    fn iter<'a>(&'a self) -> Self::Iter<'a>;
+}
 
-    #[test]
-    fn context_iter_concat_succeeds() {
-        let context1 = ContextMap::from(vec![
-            ContextEntry::new("name1", &1),
-            ContextEntry::new("name2", &2),
-        ]);
-        let context2 = ContextMap::from(vec![
-            ContextEntry::new("name3", &3),
-            ContextEntry::new("name4", &4),
-        ]);
-        let mut iter = context2.iter().concat(&context1);
-        assert_eq!(Some(&ContextEntry::new("name1", &1)), iter.next());
-        assert_eq!(Some(&ContextEntry::new("name2", &2)), iter.next());
-        assert_eq!(Some(&ContextEntry::new("name3", &3)), iter.next());
-        assert_eq!(Some(&ContextEntry::new("name4", &4)), iter.next());
-        assert_eq!(None, iter.next());
-    }
+pub trait NoContext: AbstractContext {}
+
+pub trait Context: AbstractContext {
+    fn insert<Q, V>(&mut self, key: Q, value: V)
+    where
+        Q: Into<Self::Key>,
+        V: Into<Self::Value>;
+
+    fn get<Q>(&self, key: &Q) -> Option<&<Self::Entry as Entry>::ValueBorrowed>
+    where
+        <Self::Entry as Entry>::KeyBorrowed: Borrow<Q>,
+        Q: Debug + Display + Eq + Hash + ?Sized;
+}
+
+pub trait Entry {
+    type Key: Borrow<Self::KeyBorrowed>;
+
+    type KeyBorrowed: Debug + Display + Eq + Hash + ?Sized;
+
+    type Value: Borrow<Self::ValueBorrowed>;
+
+    type ValueBorrowed: Debug + ?Sized;
+
+    fn new<Q, V>(key: Q, value: V) -> Self
+    where
+        Q: Into<Self::Key>,
+        V: Into<Self::Value>;
+
+    fn key(&self) -> &Self::KeyBorrowed;
+
+    fn value(&self) -> &Self::ValueBorrowed;
+}
+
+pub trait Iter<'a>: Default + Iterator<Item = &'a Self::Entry> {
+    type Context: AbstractContext<Entry = Self::Entry, Iter<'a> = Self> + 'a;
+
+    type Entry: 'a;
+
+    fn concat(self, context: &'a Self::Context) -> Self;
 }
