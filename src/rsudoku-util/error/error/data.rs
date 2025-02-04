@@ -2,12 +2,13 @@ use std::backtrace::Backtrace;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
-use super::base::AnyError;
-use super::context::{AbstractContext, Context, ContextDepth, Iter, StringMapContext};
-use super::kind::Kind;
+use crate::error::context::{AbstractContext, Context, ContextDepth, Iter, StringMapContext};
+use crate::error::kind::Kind;
+
+use super::AnyError;
 
 #[derive(Debug)]
-pub(super) enum ErrorData<C, K>
+pub enum ErrorData<C, K>
 where
     C: AbstractContext + 'static,
     K: Kind + 'static,
@@ -58,13 +59,7 @@ where
             Self::Wrapped { backtrace, .. } => backtrace,
         }
     }
-}
 
-impl<C, K> ErrorData<C, K>
-where
-    C: Context + 'static,
-    K: Kind + 'static,
-{
     pub fn context<'a>(&'a self, depth: ContextDepth) -> C::Iter<'a> {
         match self {
             Self::Simple { context, .. } => context.iter(),
@@ -107,7 +102,7 @@ where
     }
 }
 
-pub(super) struct ErrorDataBuilder<C, K>
+pub struct ErrorDataBuilder<C, K>
 where
     C: AbstractContext + 'static,
     K: Kind + 'static,
@@ -182,9 +177,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::error::context::Entry;
+    use crate::error::context::{string_map::StringMapEntry, Entry};
     use crate::error::kind::DefaultAnyErrorKind;
-    use crate::error::string_map::StringMapEntry;
 
     use super::*;
 

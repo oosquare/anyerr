@@ -1,20 +1,20 @@
+mod data;
+
 use std::any::{Any, TypeId};
 use std::backtrace::Backtrace;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
 use super::context::{AbstractContext, Context, ContextDepth, StringMapContext};
-use super::data::{ErrorData, ErrorDataBuilder};
 use super::kind::Kind;
 
+use data::{ErrorData, ErrorDataBuilder};
+
 #[derive(Debug)]
-pub struct AnyError<C, K>
+pub struct AnyError<C, K>(Box<ErrorData<C, K>>)
 where
     C: AbstractContext + 'static,
-    K: Kind + 'static,
-{
-    data: Box<ErrorData<C, K>>,
-}
+    K: Kind + 'static;
 
 impl<C, K> AnyError<C, K>
 where
@@ -62,22 +62,26 @@ where
     }
 
     pub fn kind(&self) -> K {
-        self.data.kind()
+        self.0.kind()
     }
 
     pub fn message(&self) -> String {
-        self.data.message()
+        self.0.message()
     }
 
     pub fn backtrace(&self) -> &Backtrace {
-        self.data.backtrace()
+        self.0.backtrace()
+    }
+
+    pub fn context(&self, depth: ContextDepth) -> C::Iter<'_> {
+        self.0.context(depth)
     }
 
     pub fn is<E>(&self) -> bool
     where
         E: Error + Send + Sync + 'static,
     {
-        match &*self.data {
+        match &*self.0 {
             ErrorData::Simple { .. } => TypeId::of::<E>() == TypeId::of::<Self>(),
             ErrorData::Layered { .. } => TypeId::of::<E>() == TypeId::of::<Self>(),
             ErrorData::Wrapped { inner, .. } => inner.is::<E>(),
@@ -88,7 +92,7 @@ where
     where
         E: Error + Send + Sync + 'static,
     {
-        match *self.data {
+        match *self.0 {
             ErrorData::Simple { .. } | ErrorData::Layered { .. } => {
                 if self.is::<E>() {
                     let boxed: Box<dyn Any> = Box::new(self);
@@ -112,7 +116,7 @@ where
     where
         E: Error + Send + Sync + 'static,
     {
-        match &*self.data {
+        match &*self.0 {
             ErrorData::Simple { .. } | ErrorData::Layered { .. } => {
                 let any: &dyn Any = self;
                 any.downcast_ref::<E>()
@@ -125,26 +129,16 @@ where
     where
         E: Error + Send + Sync + 'static,
     {
-        let use_inner = matches!(&*self.data, ErrorData::Wrapped { .. });
+        let use_inner = matches!(&*self.0, ErrorData::Wrapped { .. });
         if !use_inner {
             let any: &mut dyn Any = self;
             any.downcast_mut::<E>()
         } else {
-            let ErrorData::Wrapped { inner, .. } = &mut *self.data else {
+            let ErrorData::Wrapped { inner, .. } = &mut *self.0 else {
                 unreachable!("`self.data` matches `ErrorData::Wrapped {{ .. }}`");
             };
             inner.downcast_mut::<E>()
         }
-    }
-}
-
-impl<C, K> AnyError<C, K>
-where
-    C: Context + 'static,
-    K: Kind + 'static,
-{
-    pub fn context<'a>(&'a self, depth: ContextDepth) -> C::Iter<'a> {
-        self.data.context(depth)
     }
 }
 
@@ -154,9 +148,7 @@ where
     K: Kind + 'static,
 {
     fn from(data: ErrorData<C, K>) -> Self {
-        Self {
-            data: Box::new(data),
-        }
+        Self(Box::new(data))
     }
 }
 
@@ -166,7 +158,7 @@ where
     K: Kind + 'static,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        Display::fmt(&self.data, f)
+        Display::fmt(&self.0, f)
     }
 }
 
@@ -176,7 +168,7 @@ where
     K: Kind + 'static,
 {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
-        self.data.source()
+        self.0.source()
     }
 }
 

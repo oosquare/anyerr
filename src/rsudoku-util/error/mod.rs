@@ -1,11 +1,7 @@
 #![allow(unused_imports)]
 
-mod base;
-mod context;
-mod data;
-mod kind;
+pub mod context;
+pub mod error;
+pub mod kind;
 
-pub use base::*;
-pub use context::*;
-pub use data::*;
-pub use kind::*;
+pub use error::{AnyError, AnyErrorBuilder};
