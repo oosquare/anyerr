@@ -1,7 +1,7 @@
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 use std::hash::Hash;
 
-pub trait AnyErrorKind: Debug + Display + Clone + Copy + PartialEq + Eq + Hash + Default {
+pub trait Kind: Debug + Display + Clone + Copy + PartialEq + Eq + Hash + Default {
     const RAW_KIND: Self;
 
     const UNKNOWN_KIND: Self;
@@ -41,7 +41,7 @@ impl Display for DefaultAnyErrorKind {
     }
 }
 
-impl AnyErrorKind for DefaultAnyErrorKind {
+impl Kind for DefaultAnyErrorKind {
     const RAW_KIND: Self = DefaultAnyErrorKind::Raw;
 
     const UNKNOWN_KIND: Self = DefaultAnyErrorKind::Unknown;

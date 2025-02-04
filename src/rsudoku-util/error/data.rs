@@ -2,14 +2,14 @@ use std::backtrace::Backtrace;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
-use super::base::{AnyError, ErrorExt};
+use super::base::AnyError;
 use super::context::{ContextDepth, ContextEntry, ContextIter, ContextMap};
-use super::kind::AnyErrorKind;
+use super::kind::Kind;
 
 #[derive(Debug)]
 pub(super) enum ErrorData<K>
 where
-    K: AnyErrorKind + 'static,
+    K: Kind + 'static,
 {
     Simple {
         kind: K,
@@ -29,46 +29,19 @@ where
     },
 }
 
-impl<K> Display for ErrorData<K>
+impl<K> ErrorData<K>
 where
-    K: AnyErrorKind + 'static,
+    K: Kind + 'static,
 {
-    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        match self {
-            Self::Simple { message, .. } => write!(f, "{message}"),
-            Self::Layered { message, .. } => write!(f, "{message}"),
-            Self::Wrapped { inner, .. } => write!(f, "{inner}"),
-        }
-    }
-}
-
-impl<K> Error for ErrorData<K>
-where
-    K: AnyErrorKind + 'static,
-{
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match self {
-            Self::Simple { .. } => None,
-            Self::Layered { source, .. } => Some(source),
-            Self::Wrapped { .. } => None,
-        }
-    }
-}
-
-impl<K> ErrorExt for ErrorData<K>
-where
-    K: AnyErrorKind + 'static,
-{
-    type ErrorKind = K;
-
-    fn kind(&self) -> Self::ErrorKind {
+    pub fn kind(&self) -> K {
         match self {
             Self::Simple { kind, .. } => *kind,
             Self::Layered { kind, .. } => *kind,
             Self::Wrapped { .. } => K::RAW_KIND,
         }
     }
-    fn message(&self) -> String {
+
+    pub fn message(&self) -> String {
         match self {
             Self::Simple { message, .. } => message.into(),
             Self::Layered { message, .. } => message.into(),
@@ -76,7 +49,7 @@ where
         }
     }
 
-    fn backtrace(&self) -> &Backtrace {
+    pub fn backtrace(&self) -> &Backtrace {
         match self {
             Self::Simple { backtrace, .. } => backtrace,
             Self::Layered { source, .. } => source.backtrace(),
@@ -84,7 +57,7 @@ where
         }
     }
 
-    fn context(&self, depth: ContextDepth) -> ContextIter {
+    pub fn context(&self, depth: ContextDepth) -> ContextIter {
         match self {
             Self::Simple { context, .. } => context.iter(),
             Self::Layered {
@@ -98,9 +71,35 @@ where
     }
 }
 
+impl<K> Display for ErrorData<K>
+where
+    K: Kind + 'static,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        match self {
+            Self::Simple { message, .. } => write!(f, "{message}"),
+            Self::Layered { message, .. } => write!(f, "{message}"),
+            Self::Wrapped { inner, .. } => write!(f, "{inner}"),
+        }
+    }
+}
+
+impl<K> Error for ErrorData<K>
+where
+    K: Kind + 'static,
+{
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::Simple { .. } => None,
+            Self::Layered { source, .. } => Some(source),
+            Self::Wrapped { .. } => None,
+        }
+    }
+}
+
 pub(super) struct ErrorDataBuilder<K>
 where
-    K: AnyErrorKind + 'static,
+    K: Kind + 'static,
 {
     kind: K,
     message: String,
@@ -110,7 +109,7 @@ where
 
 impl<K> ErrorDataBuilder<K>
 where
-    K: AnyErrorKind,
+    K: Kind,
 {
     pub fn new() -> Self {
         Self {

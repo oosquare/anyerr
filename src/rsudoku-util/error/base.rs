@@ -5,32 +5,20 @@ use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
 use super::context::{ContextDepth, ContextIter};
 use super::data::ErrorData;
-use super::kind::AnyErrorKind;
+use super::kind::Kind;
 use super::{ContextMap, ErrorDataBuilder};
-
-pub trait ErrorExt: Error {
-    type ErrorKind: AnyErrorKind;
-
-    fn kind(&self) -> Self::ErrorKind;
-
-    fn message(&self) -> String;
-
-    fn backtrace(&self) -> &Backtrace;
-
-    fn context(&self, depth: ContextDepth) -> ContextIter;
-}
 
 #[derive(Debug)]
 pub struct AnyError<K>
 where
-    K: AnyErrorKind + 'static,
+    K: Kind + 'static,
 {
     data: Box<ErrorData<K>>,
 }
 
 impl<K> AnyError<K>
 where
-    K: AnyErrorKind + 'static,
+    K: Kind + 'static,
 {
     pub fn minimal<S: Into<String>>(message: S) -> Self {
         Self::from(ErrorData::<K>::Simple {
@@ -70,6 +58,22 @@ where
 
     pub fn builder() -> AnyErrorBuilder<K> {
         AnyErrorBuilder::new()
+    }
+
+    pub fn kind(&self) -> K {
+        self.data.kind()
+    }
+
+    pub fn message(&self) -> String {
+        self.data.message()
+    }
+
+    pub fn backtrace(&self) -> &Backtrace {
+        self.data.backtrace()
+    }
+
+    pub fn context(&self, depth: ContextDepth) -> ContextIter {
+        self.data.context(depth)
     }
 
     pub fn is<E>(&self) -> bool
@@ -139,7 +143,7 @@ where
 
 impl<K> From<ErrorData<K>> for AnyError<K>
 where
-    K: AnyErrorKind,
+    K: Kind,
 {
     fn from(data: ErrorData<K>) -> Self {
         Self {
@@ -150,7 +154,7 @@ where
 
 impl<K> Display for AnyError<K>
 where
-    K: AnyErrorKind,
+    K: Kind,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         Display::fmt(&self.data, f)
@@ -159,33 +163,10 @@ where
 
 impl<K> Error for AnyError<K>
 where
-    K: AnyErrorKind,
+    K: Kind,
 {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         self.data.source()
-    }
-}
-
-impl<K> ErrorExt for AnyError<K>
-where
-    K: AnyErrorKind,
-{
-    type ErrorKind = K;
-
-    fn kind(&self) -> Self::ErrorKind {
-        self.data.kind()
-    }
-
-    fn message(&self) -> String {
-        self.data.message()
-    }
-
-    fn backtrace(&self) -> &Backtrace {
-        self.data.backtrace()
-    }
-
-    fn context(&self, depth: ContextDepth) -> ContextIter {
-        self.data.context(depth)
     }
 }
 
@@ -213,11 +194,11 @@ impl<E: Error + Any + Send + Sync> ErrorAndAny for E {
 
 pub struct AnyErrorBuilder<K>(ErrorDataBuilder<K>)
 where
-    K: AnyErrorKind + 'static;
+    K: Kind + 'static;
 
 impl<K> AnyErrorBuilder<K>
 where
-    K: AnyErrorKind + 'static,
+    K: Kind + 'static,
 {
     fn new() -> Self {
         Self(ErrorDataBuilder::new())
