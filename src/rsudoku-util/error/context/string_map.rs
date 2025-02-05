@@ -1,35 +1,58 @@
 use std::borrow::Borrow;
-use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
+use std::fmt::{format, Debug, Display, Formatter, Result as FmtResult};
 use std::hash::Hash;
+use std::marker::PhantomData;
 use std::slice::Iter as SliceIter;
 
-use super::{AbstractContext, Context, Entry, Iter};
+use super::{AbstractContext, Context, Entry, Iter, Sealed, StringContext};
+
+pub type StringKeyStringMapContext = StringMapContext<String, str>;
+pub type StringKeyStringMapEntry = <StringKeyStringMapContext as AbstractContext>::Entry;
+pub type StringKeyStringMapIter<'a> = <StringKeyStringMapContext as AbstractContext>::Iter<'a>;
+
+pub type LiteralKeyStringMapContext = StringMapContext<String, str>;
+pub type LiteralKeyStringMapEntry = <LiteralKeyStringMapContext as AbstractContext>::Entry;
+pub type LiteralKeyStringMapIter<'a> = <LiteralKeyStringMapContext as AbstractContext>::Iter<'a>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct StringMapContext {
-    entries: Vec<StringMapEntry>,
+pub struct StringMapContext<K = String, KB = str>
+where
+    K: Borrow<KB> + Debug + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+{
+    entries: Vec<StringMapEntry<K, KB>>,
 }
 
-impl StringMapContext {
+impl<K, KB> StringMapContext<K, KB>
+where
+    K: Borrow<KB> + Debug + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+{
     pub fn new() -> Self {
         Self {
             entries: Vec::new(),
         }
     }
 
-    pub fn iter(&self) -> StringMapIter {
+    pub fn iter(&self) -> StringMapIter<'_, K, KB> {
         self.entries.iter().into()
     }
 }
 
-impl From<Vec<StringMapEntry>> for StringMapContext {
-    fn from(entries: Vec<StringMapEntry>) -> Self {
+impl<K, KB> From<Vec<StringMapEntry<K, KB>>> for StringMapContext<K, KB>
+where
+    K: Borrow<KB> + Debug + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+{
+    fn from(entries: Vec<StringMapEntry<K, KB>>) -> Self {
         Self { entries }
     }
 }
 
-impl<Q, V> From<Vec<(Q, V)>> for StringMapContext
+impl<K, KB, Q, V> From<Vec<(Q, V)>> for StringMapContext<K, KB>
 where
+    K: Borrow<KB> + Debug + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
     Q: Into<<Self as AbstractContext>::Key>,
     V: Into<<Self as AbstractContext>::Value>,
 {
@@ -38,16 +61,22 @@ where
     }
 }
 
-impl FromIterator<StringMapEntry> for StringMapContext {
-    fn from_iter<T: IntoIterator<Item = StringMapEntry>>(iter: T) -> Self {
+impl<K, KB> FromIterator<StringMapEntry<K, KB>> for StringMapContext<K, KB>
+where
+    K: Borrow<KB> + Debug + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+{
+    fn from_iter<T: IntoIterator<Item = StringMapEntry<K, KB>>>(iter: T) -> Self {
         Self {
             entries: iter.into_iter().collect(),
         }
     }
 }
 
-impl<Q, V> FromIterator<(Q, V)> for StringMapContext
+impl<K, KB, Q, V> FromIterator<(Q, V)> for StringMapContext<K, KB>
 where
+    K: Borrow<KB> + Debug + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
     Q: Into<<Self as AbstractContext>::Key>,
     V: Into<<Self as AbstractContext>::Value>,
 {
@@ -58,27 +87,39 @@ where
     }
 }
 
-impl Default for StringMapContext {
+impl<K, KB> Default for StringMapContext<K, KB>
+where
+    K: Borrow<KB> + Debug + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+{
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl AbstractContext for StringMapContext {
-    type Key = String;
+impl<K, KB> AbstractContext for StringMapContext<K, KB>
+where
+    K: Borrow<KB> + Debug + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+{
+    type Key = K;
 
     type Value = String;
 
-    type Entry = StringMapEntry;
+    type Entry = StringMapEntry<K, KB>;
 
-    type Iter<'a> = StringMapIter<'a>;
+    type Iter<'a> = StringMapIter<'a, K, KB>;
 
     fn iter<'a>(&'a self) -> Self::Iter<'a> {
         self.entries.iter().into()
     }
 }
 
-impl Context for StringMapContext {
+impl<K, KB> Context for StringMapContext<K, KB>
+where
+    K: Borrow<KB> + Debug + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+{
     fn insert<Q, V>(&mut self, key: Q, value: V)
     where
         Q: Into<Self::Key>,
@@ -99,20 +140,35 @@ impl Context for StringMapContext {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct StringMapEntry {
-    content: String,
-    key_len: usize,
-}
-
-impl StringMapEntry {
-    fn split_content(&self) -> (&str, &str) {
-        self.content.split_at(self.key_len)
-    }
-}
-
-impl<Q, V> From<(Q, V)> for StringMapEntry
+impl<K, KB> Sealed for StringMapContext<K, KB>
 where
+    K: Borrow<KB> + Debug + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+{
+}
+
+impl<K, KB> StringContext for StringMapContext<K, KB>
+where
+    K: Borrow<KB> + Debug + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+{
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct StringMapEntry<K = String, KB = str>
+where
+    K: Borrow<KB> + Debug + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+{
+    key: K,
+    value: String,
+    _phantom: PhantomData<&'static KB>,
+}
+
+impl<K, KB, Q, V> From<(Q, V)> for StringMapEntry<K, KB>
+where
+    K: Borrow<KB> + Debug + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
     Q: Into<<Self as Entry>::Key>,
     V: Into<<Self as Entry>::Value>,
 {
@@ -121,27 +177,24 @@ where
     }
 }
 
-impl Debug for StringMapEntry {
+impl<K, KB> Display for StringMapEntry<K, KB>
+where
+    K: Borrow<KB> + Debug + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+{
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        let (name, value) = self.split_content();
-        f.debug_struct("StringEntry")
-            .field("key", &name)
-            .field("value", &value)
-            .finish()
+        write!(f, "{} = {}", self.key.borrow(), self.value)
     }
 }
 
-impl Display for StringMapEntry {
-    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        let (key, value) = self.split_content();
-        write!(f, "{key} = {value}")
-    }
-}
+impl<K, KB> Entry for StringMapEntry<K, KB>
+where
+    K: Borrow<KB> + Debug + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+{
+    type Key = K;
 
-impl Entry for StringMapEntry {
-    type Key = String;
-
-    type KeyBorrowed = str;
+    type KeyBorrowed = KB;
 
     type Value = String;
 
@@ -152,50 +205,70 @@ impl Entry for StringMapEntry {
         Q: Into<Self::Key>,
         V: Into<Self::Value>,
     {
-        let key = key.into();
         Self {
-            content: format!("{}{:?}", key, value.into()),
-            key_len: key.len(),
+            key: key.into(),
+            value: format!("{:?}", value.into()),
+            _phantom: Default::default(),
         }
     }
 
     fn key(&self) -> &Self::KeyBorrowed {
-        self.split_content().0
+        self.key.borrow()
     }
 
     fn value(&self) -> &Self::ValueBorrowed {
-        self.split_content().1
+        self.value.borrow()
     }
 }
 
-pub enum StringMapIter<'a> {
+pub enum StringMapIter<'a, K = String, KB = str>
+where
+    K: Borrow<KB> + Debug + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+{
     Node {
-        iter: SliceIter<'a, StringMapEntry>,
-        next: Option<Box<StringMapIter<'a>>>,
+        iter: SliceIter<'a, StringMapEntry<K, KB>>,
+        next: Option<Box<StringMapIter<'a, K, KB>>>,
     },
     None,
 }
 
-impl<'a> StringMapIter<'a> {
+impl<'a, K, KB> StringMapIter<'a, K, KB>
+where
+    K: Borrow<KB> + Debug + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+{
     pub fn new() -> Self {
         Self::None
     }
 }
 
-impl<'a> Default for StringMapIter<'a> {
+impl<'a, K, KB> Default for StringMapIter<'a, K, KB>
+where
+    K: Borrow<KB> + Debug + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+{
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<'a> From<SliceIter<'a, StringMapEntry>> for StringMapIter<'a> {
-    fn from(iter: SliceIter<'a, StringMapEntry>) -> Self {
+impl<'a, K, KB> From<SliceIter<'a, StringMapEntry<K, KB>>> for StringMapIter<'a, K, KB>
+where
+    K: Borrow<KB> + Debug + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+{
+    fn from(iter: SliceIter<'a, StringMapEntry<K, KB>>) -> Self {
         Self::Node { iter, next: None }
     }
 }
 
-impl<'a> Iterator for StringMapIter<'a> {
-    type Item = &'a StringMapEntry;
+impl<'a, K, KB> Iterator for StringMapIter<'a, K, KB>
+where
+    K: Borrow<KB> + Debug + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+{
+    type Item = &'a StringMapEntry<K, KB>;
 
     fn next(&mut self) -> Option<Self::Item> {
         while let Self::Node { iter, next } = self {
@@ -211,10 +284,14 @@ impl<'a> Iterator for StringMapIter<'a> {
     }
 }
 
-impl<'a> Iter<'a> for StringMapIter<'a> {
-    type Context = StringMapContext;
+impl<'a, K, KB> Iter<'a> for StringMapIter<'a, K, KB>
+where
+    K: Borrow<KB> + Debug + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+{
+    type Context = StringMapContext<K, KB>;
 
-    type Entry = StringMapEntry;
+    type Entry = StringMapEntry<K, KB>;
 
     fn concat(self, context: &'a Self::Context) -> Self {
         if context.entries.is_empty() {
@@ -239,17 +316,17 @@ mod tests {
     #[test]
     fn string_entry_getter_succeeds() {
         {
-            let entry = StringMapEntry::new("key", "1");
+            let entry = StringKeyStringMapEntry::new("key", "1");
             assert_eq!("key", entry.key());
             assert_eq!(r#""1""#, entry.value());
         }
         {
-            let entry = StringMapEntry::new("key", "&str value");
+            let entry = StringKeyStringMapEntry::new("key", "&str value");
             assert_eq!("key", entry.key());
             assert_eq!(r#""&str value""#, entry.value());
         }
         {
-            let entry = StringMapEntry::new("key", &String::from("String value"));
+            let entry = StringKeyStringMapEntry::new("key", &String::from("String value"));
             assert_eq!("key", entry.key());
             assert_eq!(r#""String value""#, entry.value());
         }
@@ -258,16 +335,16 @@ mod tests {
     #[test]
     fn string_entry_to_string_succeeds() {
         {
-            let entry = StringMapEntry::new("key", "1");
+            let entry = StringKeyStringMapEntry::new("key", "1");
             assert_eq!(r#"key = "1""#, entry.to_string());
         }
         {
-            let entry = StringMapEntry::new("key", "&str value");
+            let entry = StringKeyStringMapEntry::new("key", "&str value");
             assert_eq!(r#"key = "&str value""#, entry.to_string());
         }
 
         {
-            let entry = StringMapEntry::new("key", &String::from("String value"));
+            let entry = StringKeyStringMapEntry::new("key", &String::from("String value"));
             assert_eq!(r#"key = "String value""#, entry.to_string());
         }
     }
@@ -275,30 +352,48 @@ mod tests {
     #[test]
     fn string_context_iter_from_succeeds() {
         let context = StringMapContext::from(vec![
-            StringMapEntry::new("key1", "1"),
-            StringMapEntry::new("key2", "2"),
+            StringKeyStringMapEntry::new("key1", "1"),
+            StringKeyStringMapEntry::new("key2", "2"),
         ]);
         let mut iter = context.iter();
-        assert_eq!(Some(&StringMapEntry::new("key1", "1")), iter.next());
-        assert_eq!(Some(&StringMapEntry::new("key2", "2")), iter.next());
+        assert_eq!(
+            Some(&StringKeyStringMapEntry::new("key1", "1")),
+            iter.next()
+        );
+        assert_eq!(
+            Some(&StringKeyStringMapEntry::new("key2", "2")),
+            iter.next()
+        );
         assert_eq!(None, iter.next());
     }
 
     #[test]
     fn string_context_iter_concat_succeeds() {
         let context1 = StringMapContext::from(vec![
-            StringMapEntry::new("key1", "1"),
-            StringMapEntry::new("key2", "2"),
+            StringKeyStringMapEntry::new("key1", "1"),
+            StringKeyStringMapEntry::new("key2", "2"),
         ]);
         let context2 = StringMapContext::from(vec![
-            StringMapEntry::new("key3", "3"),
-            StringMapEntry::new("key4", "4"),
+            StringKeyStringMapEntry::new("key3", "3"),
+            StringKeyStringMapEntry::new("key4", "4"),
         ]);
         let mut iter = context2.iter().concat(&context1);
-        assert_eq!(Some(&StringMapEntry::new("key1", "1")), iter.next());
-        assert_eq!(Some(&StringMapEntry::new("key2", "2")), iter.next());
-        assert_eq!(Some(&StringMapEntry::new("key3", "3")), iter.next());
-        assert_eq!(Some(&StringMapEntry::new("key4", "4")), iter.next());
+        assert_eq!(
+            Some(&StringKeyStringMapEntry::new("key1", "1")),
+            iter.next()
+        );
+        assert_eq!(
+            Some(&StringKeyStringMapEntry::new("key2", "2")),
+            iter.next()
+        );
+        assert_eq!(
+            Some(&StringKeyStringMapEntry::new("key3", "3")),
+            iter.next()
+        );
+        assert_eq!(
+            Some(&StringKeyStringMapEntry::new("key4", "4")),
+            iter.next()
+        );
         assert_eq!(None, iter.next());
     }
 }

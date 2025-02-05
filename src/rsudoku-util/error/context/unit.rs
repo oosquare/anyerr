@@ -1,7 +1,7 @@
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::marker::PhantomData;
 
-use super::{AbstractContext, Entry, Iter, NoContext};
+use super::{AbstractContext, Entry, Iter, NoContext, Sealed};
 
 #[derive(Debug)]
 pub struct UnitContext;
@@ -25,6 +25,8 @@ impl AbstractContext for UnitContext {
         Self::Iter::default()
     }
 }
+
+impl Sealed for UnitContext {}
 
 impl NoContext for UnitContext {}
 

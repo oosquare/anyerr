@@ -2,7 +2,9 @@ use std::backtrace::Backtrace;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
-use crate::error::context::{AbstractContext, Context, ContextDepth, Iter, StringMapContext};
+use crate::error::context::{
+    AbstractContext, Context, ContextDepth, Iter, StringContext, StringMapContext,
+};
 use crate::error::kind::Kind;
 
 use super::AnyError;
@@ -162,7 +164,7 @@ where
 
 impl<C, K> ErrorDataBuilder<C, K>
 where
-    C: Context + 'static,
+    C: StringContext + 'static,
     K: Kind + 'static,
 {
     pub fn context<Q, V>(mut self, name: Q, value: V) -> Self
