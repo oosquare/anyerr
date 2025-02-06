@@ -2,7 +2,7 @@
 
 pub mod context;
 pub mod converter;
-pub mod error;
+pub mod core;
 pub mod kind;
 
-pub use error::{AnyError, AnyErrorBuilder};
+pub use core::{AnyError, AnyErrorBuilder};

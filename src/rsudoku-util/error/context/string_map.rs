@@ -84,7 +84,7 @@ where
 {
     fn from_iter<T: IntoIterator<Item = (Q, V)>>(iter: T) -> Self {
         iter.into_iter()
-            .map(|entry| StringMapEntry::from(entry))
+            .map(StringMapEntry::from)
             .collect()
     }
 }
@@ -112,7 +112,7 @@ where
 
     type Iter<'a> = StringMapIter<'a, K, KB>;
 
-    fn iter<'a>(&'a self) -> Self::Iter<'a> {
+    fn iter(&self) -> Self::Iter<'_> {
         self.entries.iter().into()
     }
 }
@@ -235,7 +235,7 @@ where
     None,
 }
 
-impl<'a, K, KB> StringMapIter<'a, K, KB>
+impl<K, KB> StringMapIter<'_, K, KB>
 where
     K: Borrow<KB> + Debug + 'static,
     KB: Debug + Display + Eq + Hash + ?Sized + 'static,
@@ -245,7 +245,7 @@ where
     }
 }
 
-impl<'a, K, KB> Default for StringMapIter<'a, K, KB>
+impl<K, KB> Default for StringMapIter<'_, K, KB>
 where
     K: Borrow<KB> + Debug + 'static,
     KB: Debug + Display + Eq + Hash + ?Sized + 'static,

@@ -31,7 +31,7 @@ pub trait AbstractContext: Default + Debug {
     where
         Self: 'a;
 
-    fn iter<'a>(&'a self) -> Self::Iter<'a>;
+    fn iter(&self) -> Self::Iter<'_>;
 }
 
 pub trait NoContext: AbstractContext + Sealed {}

@@ -21,7 +21,7 @@ impl AbstractContext for UnitContext {
 
     type Iter<'a> = UnitIter<'a>;
 
-    fn iter<'a>(&'a self) -> Self::Iter<'a> {
+    fn iter(&self) -> Self::Iter<'_> {
         Self::Iter::default()
     }
 }
@@ -69,17 +69,11 @@ impl Entry for DummyEntry {
 }
 
 #[derive(Debug)]
+#[derive(Default)]
 pub struct UnitIter<'a> {
     _phantom: PhantomData<&'a ()>,
 }
 
-impl<'a> Default for UnitIter<'a> {
-    fn default() -> Self {
-        Self {
-            _phantom: Default::default(),
-        }
-    }
-}
 
 impl<'a> Iterator for UnitIter<'a> {
     type Item = &'a DummyEntry;

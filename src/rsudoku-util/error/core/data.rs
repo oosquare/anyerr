@@ -63,7 +63,7 @@ where
         }
     }
 
-    pub fn context<'a>(&'a self, depth: ContextDepth) -> C::Iter<'a> {
+    pub fn context(&self, depth: ContextDepth) -> C::Iter<'_> {
         match self {
             Self::Simple { context, .. } => context.iter(),
             Self::Layered {
@@ -150,14 +150,14 @@ where
             Some(source) => ErrorData::Layered {
                 kind: self.kind,
                 message: self.message,
-                context: self.context.into(),
+                context: self.context,
                 source,
             },
             None => ErrorData::Simple {
                 kind: self.kind,
                 message: self.message,
                 backtrace,
-                context: self.context.into(),
+                context: self.context,
             },
         }
     }
