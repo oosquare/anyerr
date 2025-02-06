@@ -230,12 +230,12 @@ where
     C: StringContext + 'static,
     K: Kind + 'static,
 {
-    pub fn context<Q, V>(self, name: Q, value: V) -> Self
+    pub fn context<Q, V>(self, key: Q, value: V) -> Self
     where
         Q: Into<C::Key>,
-        V: Into<C::Value>,
+        V: Debug,
     {
-        Self(self.0.context(name, value))
+        Self(self.0.context(key, value))
     }
 }
 
@@ -243,13 +243,13 @@ where
 mod tests {
     use std::num::ParseIntError;
 
-    use crate::error::context::StringMapContext;
+    use crate::error::context::StringKeyStringMapContext;
     use crate::error::kind::DefaultAnyErrorKind;
 
     use super::*;
 
-    type DefaultAnyError = AnyError<StringMapContext, DefaultAnyErrorKind>;
-    type DefaultErrorData = ErrorData<StringMapContext, DefaultAnyErrorKind>;
+    type DefaultAnyError = AnyError<StringKeyStringMapContext, DefaultAnyErrorKind>;
+    type DefaultErrorData = ErrorData<StringKeyStringMapContext, DefaultAnyErrorKind>;
 
     #[test]
     fn any_error_builder_succeeds() {
@@ -261,12 +261,13 @@ mod tests {
             .message("could not parse `&str` to `u32`")
             .context("string", "-1")
             .context("target-type", String::from("u32"))
+            .context("expected", -1)
             .source(source)
             .build();
 
         assert_eq!(err.kind(), DefaultAnyErrorKind::ValueValidation);
         assert_eq!(err.to_string(), "could not parse `&str` to `u32`");
-        assert_eq!(err.context(ContextDepth::All).count(), 2);
+        assert_eq!(err.context(ContextDepth::All).count(), 3);
         assert!(err.source().is_some());
     }
 

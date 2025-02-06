@@ -3,7 +3,7 @@
 pub mod string_map;
 pub mod unit;
 
-pub use string_map::StringMapContext;
+pub use string_map::{LiteralKeyStringMapContext, StringKeyStringMapContext, StringMapContext};
 pub use unit::UnitContext;
 
 use std::any::Any;
@@ -11,6 +11,8 @@ use std::borrow::Borrow;
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
 use std::marker::PhantomData;
+
+use super::converter::Converter;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ContextDepth {
@@ -39,6 +41,14 @@ pub trait Context: AbstractContext {
     where
         Q: Into<Self::Key>,
         V: Into<Self::Value>;
+
+    fn insert_with<C, Q, V>(&mut self, converter: C, key: Q, value: V)
+    where
+        Q: Into<Self::Key>,
+        C: Converter<V, Self::Value>,
+    {
+        self.insert(key, converter.run(value));
+    }
 
     fn get<Q>(&self, key: &Q) -> Option<&<Self::Entry as Entry>::ValueBorrowed>
     where

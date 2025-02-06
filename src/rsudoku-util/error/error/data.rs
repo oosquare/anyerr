@@ -5,6 +5,7 @@ use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 use crate::error::context::{
     AbstractContext, Context, ContextDepth, Iter, StringContext, StringMapContext,
 };
+use crate::error::converter::DebugConverter;
 use crate::error::kind::Kind;
 
 use super::AnyError;
@@ -167,25 +168,27 @@ where
     C: StringContext + 'static,
     K: Kind + 'static,
 {
-    pub fn context<Q, V>(mut self, name: Q, value: V) -> Self
+    pub fn context<Q, V>(mut self, key: Q, value: V) -> Self
     where
         Q: Into<C::Key>,
-        V: Into<C::Value>,
+        V: Debug,
     {
-        self.context.insert(name, value);
+        self.context.insert_with(DebugConverter, key, value);
         self
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::error::context::{string_map::StringMapEntry, Entry};
+    use crate::error::context::string_map::LiteralKeyStringMapEntry;
+    use crate::error::context::{Entry, LiteralKeyStringMapContext};
     use crate::error::kind::DefaultAnyErrorKind;
 
     use super::*;
 
-    type DefaultErrorData = ErrorData<StringMapContext, DefaultAnyErrorKind>;
-    type DefaultErrorDataBuilder = ErrorDataBuilder<StringMapContext, DefaultAnyErrorKind>;
+    type DefaultErrorData = ErrorData<LiteralKeyStringMapContext, DefaultAnyErrorKind>;
+    type DefaultErrorDataBuilder =
+        ErrorDataBuilder<LiteralKeyStringMapContext, DefaultAnyErrorKind>;
 
     #[test]
     fn error_data_message_succeeds() {
@@ -235,11 +238,17 @@ mod tests {
             };
 
             let mut iter = data.context(ContextDepth::All);
-            assert_eq!(iter.next(), Some(&StringMapEntry::new("key", "1")));
+            assert_eq!(
+                iter.next(),
+                Some(&LiteralKeyStringMapEntry::new("key", "1"))
+            );
             assert_eq!(iter.next(), None);
 
             let mut iter = data.context(ContextDepth::Shallowest);
-            assert_eq!(iter.next(), Some(&StringMapEntry::new("key", "1")));
+            assert_eq!(
+                iter.next(),
+                Some(&LiteralKeyStringMapEntry::new("key", "1"))
+            );
             assert_eq!(iter.next(), None);
         }
         {
@@ -256,12 +265,21 @@ mod tests {
             };
 
             let mut iter = data.context(ContextDepth::All);
-            assert_eq!(iter.next(), Some(&StringMapEntry::new("key2", "2")));
-            assert_eq!(iter.next(), Some(&StringMapEntry::new("key1", "1")));
+            assert_eq!(
+                iter.next(),
+                Some(&LiteralKeyStringMapEntry::new("key2", "2"))
+            );
+            assert_eq!(
+                iter.next(),
+                Some(&LiteralKeyStringMapEntry::new("key1", "1"))
+            );
             assert_eq!(iter.next(), None);
 
             let mut iter = data.context(ContextDepth::Shallowest);
-            assert_eq!(iter.next(), Some(&StringMapEntry::new("key2", "2")));
+            assert_eq!(
+                iter.next(),
+                Some(&LiteralKeyStringMapEntry::new("key2", "2"))
+            );
             assert_eq!(iter.next(), None);
         }
         {

@@ -1,8 +1,10 @@
 use std::borrow::Borrow;
-use std::fmt::{format, Debug, Display, Formatter, Result as FmtResult};
+use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 use std::hash::Hash;
 use std::marker::PhantomData;
 use std::slice::Iter as SliceIter;
+
+use crate::error::converter::Converter;
 
 use super::{AbstractContext, Context, Entry, Iter, Sealed, StringContext};
 
@@ -15,7 +17,7 @@ pub type LiteralKeyStringMapEntry = <LiteralKeyStringMapContext as AbstractConte
 pub type LiteralKeyStringMapIter<'a> = <LiteralKeyStringMapContext as AbstractContext>::Iter<'a>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct StringMapContext<K = String, KB = str>
+pub struct StringMapContext<K, KB>
 where
     K: Borrow<KB> + Debug + 'static,
     KB: Debug + Display + Eq + Hash + ?Sized + 'static,
@@ -207,7 +209,7 @@ where
     {
         Self {
             key: key.into(),
-            value: format!("{:?}", value.into()),
+            value: value.into(),
             _phantom: Default::default(),
         }
     }
@@ -311,6 +313,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::error::converter::DebugConverter;
+
     use super::*;
 
     #[test]
@@ -318,17 +322,17 @@ mod tests {
         {
             let entry = StringKeyStringMapEntry::new("key", "1");
             assert_eq!("key", entry.key());
-            assert_eq!(r#""1""#, entry.value());
+            assert_eq!("1", entry.value());
         }
         {
             let entry = StringKeyStringMapEntry::new("key", "&str value");
             assert_eq!("key", entry.key());
-            assert_eq!(r#""&str value""#, entry.value());
+            assert_eq!("&str value", entry.value());
         }
         {
             let entry = StringKeyStringMapEntry::new("key", &String::from("String value"));
             assert_eq!("key", entry.key());
-            assert_eq!(r#""String value""#, entry.value());
+            assert_eq!("String value", entry.value());
         }
     }
 
@@ -336,21 +340,32 @@ mod tests {
     fn string_entry_to_string_succeeds() {
         {
             let entry = StringKeyStringMapEntry::new("key", "1");
-            assert_eq!(r#"key = "1""#, entry.to_string());
+            assert_eq!("key = 1", entry.to_string());
         }
         {
             let entry = StringKeyStringMapEntry::new("key", "&str value");
-            assert_eq!(r#"key = "&str value""#, entry.to_string());
+            assert_eq!("key = &str value", entry.to_string());
         }
 
         {
             let entry = StringKeyStringMapEntry::new("key", &String::from("String value"));
-            assert_eq!(r#"key = "String value""#, entry.to_string());
+            assert_eq!("key = String value", entry.to_string());
         }
     }
 
     #[test]
-    fn string_context_iter_from_succeeds() {
+    fn string_map_context_operation_succeeds() {
+        let mut context = StringKeyStringMapContext::new();
+        context.insert("key1", "1");
+        context.insert_with(DebugConverter, "key2", 2);
+        context.insert_with(DebugConverter, "key3", "3");
+        assert_eq!(context.access("key1").unwrap(), "1");
+        assert_eq!(context.access("key2").unwrap(), "2");
+        assert_eq!(context.access("key3").unwrap(), "\"3\"");
+    }
+
+    #[test]
+    fn string_map_context_iter_from_succeeds() {
         let context = StringMapContext::from(vec![
             StringKeyStringMapEntry::new("key1", "1"),
             StringKeyStringMapEntry::new("key2", "2"),
@@ -368,7 +383,7 @@ mod tests {
     }
 
     #[test]
-    fn string_context_iter_concat_succeeds() {
+    fn string_map_context_iter_concat_succeeds() {
         let context1 = StringMapContext::from(vec![
             StringKeyStringMapEntry::new("key1", "1"),
             StringKeyStringMapEntry::new("key2", "2"),
