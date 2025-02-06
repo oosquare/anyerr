@@ -20,7 +20,7 @@ pub enum ContextDepth {
     Shallowest,
 }
 
-pub trait AbstractContext: Default + Debug {
+pub trait AbstractContext: Default + Debug + Send + Sync {
     type Key;
 
     type Value;
@@ -100,13 +100,13 @@ pub trait ExtensibleContext: Context {
 }
 
 pub trait Entry {
-    type Key: Borrow<Self::KeyBorrowed> + Debug;
+    type Key: Borrow<Self::KeyBorrowed> + Debug + Send + Sync;
 
-    type KeyBorrowed: Debug + Display + Eq + Hash + ?Sized;
+    type KeyBorrowed: Debug + Display + Eq + Hash + ?Sized + Send + Sync;
 
-    type Value: Borrow<Self::ValueBorrowed> + Debug;
+    type Value: Borrow<Self::ValueBorrowed> + Debug + Send + Sync;
 
-    type ValueBorrowed: Debug + ?Sized;
+    type ValueBorrowed: Debug + ?Sized + Send + Sync;
 
     fn new<Q, V>(key: Q, value: V) -> Self
     where

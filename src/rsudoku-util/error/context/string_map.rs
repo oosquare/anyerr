@@ -19,16 +19,16 @@ pub type LiteralKeyStringMapIter<'a> = <LiteralKeyStringMapContext as AbstractCo
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StringMapContext<K, KB>
 where
-    K: Borrow<KB> + Debug + 'static,
-    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+    K: Borrow<KB> + Debug + Send + Sync + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + Send + Sync + 'static,
 {
     entries: Vec<StringMapEntry<K, KB>>,
 }
 
 impl<K, KB> StringMapContext<K, KB>
 where
-    K: Borrow<KB> + Debug + 'static,
-    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+    K: Borrow<KB> + Debug + Send + Sync + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + Send + Sync + 'static,
 {
     pub fn new() -> Self {
         Self {
@@ -43,8 +43,8 @@ where
 
 impl<K, KB> From<Vec<StringMapEntry<K, KB>>> for StringMapContext<K, KB>
 where
-    K: Borrow<KB> + Debug + 'static,
-    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+    K: Borrow<KB> + Debug + Send + Sync + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + Send + Sync + 'static,
 {
     fn from(entries: Vec<StringMapEntry<K, KB>>) -> Self {
         Self { entries }
@@ -53,8 +53,8 @@ where
 
 impl<K, KB, Q, V> From<Vec<(Q, V)>> for StringMapContext<K, KB>
 where
-    K: Borrow<KB> + Debug + 'static,
-    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+    K: Borrow<KB> + Debug + Send + Sync + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + Send + Sync + 'static,
     Q: Into<<Self as AbstractContext>::Key>,
     V: Into<<Self as AbstractContext>::Value>,
 {
@@ -65,8 +65,8 @@ where
 
 impl<K, KB> FromIterator<StringMapEntry<K, KB>> for StringMapContext<K, KB>
 where
-    K: Borrow<KB> + Debug + 'static,
-    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+    K: Borrow<KB> + Debug + Send + Sync + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + Send + Sync + 'static,
 {
     fn from_iter<T: IntoIterator<Item = StringMapEntry<K, KB>>>(iter: T) -> Self {
         Self {
@@ -77,22 +77,20 @@ where
 
 impl<K, KB, Q, V> FromIterator<(Q, V)> for StringMapContext<K, KB>
 where
-    K: Borrow<KB> + Debug + 'static,
-    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+    K: Borrow<KB> + Debug + Send + Sync + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + Send + Sync + 'static,
     Q: Into<<Self as AbstractContext>::Key>,
     V: Into<<Self as AbstractContext>::Value>,
 {
     fn from_iter<T: IntoIterator<Item = (Q, V)>>(iter: T) -> Self {
-        iter.into_iter()
-            .map(StringMapEntry::from)
-            .collect()
+        iter.into_iter().map(StringMapEntry::from).collect()
     }
 }
 
 impl<K, KB> Default for StringMapContext<K, KB>
 where
-    K: Borrow<KB> + Debug + 'static,
-    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+    K: Borrow<KB> + Debug + Send + Sync + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + Send + Sync + 'static,
 {
     fn default() -> Self {
         Self::new()
@@ -101,8 +99,8 @@ where
 
 impl<K, KB> AbstractContext for StringMapContext<K, KB>
 where
-    K: Borrow<KB> + Debug + 'static,
-    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+    K: Borrow<KB> + Debug + Send + Sync + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + Send + Sync + 'static,
 {
     type Key = K;
 
@@ -119,8 +117,8 @@ where
 
 impl<K, KB> Context for StringMapContext<K, KB>
 where
-    K: Borrow<KB> + Debug + 'static,
-    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+    K: Borrow<KB> + Debug + Send + Sync + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + Send + Sync + 'static,
 {
     fn insert<Q, V>(&mut self, key: Q, value: V)
     where
@@ -144,23 +142,23 @@ where
 
 impl<K, KB> Sealed for StringMapContext<K, KB>
 where
-    K: Borrow<KB> + Debug + 'static,
-    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+    K: Borrow<KB> + Debug + Send + Sync + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + Send + Sync + 'static,
 {
 }
 
 impl<K, KB> StringContext for StringMapContext<K, KB>
 where
-    K: Borrow<KB> + Debug + 'static,
-    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+    K: Borrow<KB> + Debug + Send + Sync + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + Send + Sync + 'static,
 {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct StringMapEntry<K = String, KB = str>
 where
-    K: Borrow<KB> + Debug + 'static,
-    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+    K: Borrow<KB> + Debug + Send + Sync + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + Send + Sync + 'static,
 {
     key: K,
     value: String,
@@ -169,8 +167,8 @@ where
 
 impl<K, KB, Q, V> From<(Q, V)> for StringMapEntry<K, KB>
 where
-    K: Borrow<KB> + Debug + 'static,
-    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+    K: Borrow<KB> + Debug + Send + Sync + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + Send + Sync + 'static,
     Q: Into<<Self as Entry>::Key>,
     V: Into<<Self as Entry>::Value>,
 {
@@ -181,8 +179,8 @@ where
 
 impl<K, KB> Display for StringMapEntry<K, KB>
 where
-    K: Borrow<KB> + Debug + 'static,
-    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+    K: Borrow<KB> + Debug + Send + Sync + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + Send + Sync + 'static,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         write!(f, "{} = {}", self.key.borrow(), self.value)
@@ -191,8 +189,8 @@ where
 
 impl<K, KB> Entry for StringMapEntry<K, KB>
 where
-    K: Borrow<KB> + Debug + 'static,
-    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+    K: Borrow<KB> + Debug + Send + Sync + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + Send + Sync + 'static,
 {
     type Key = K;
 
@@ -225,8 +223,8 @@ where
 
 pub enum StringMapIter<'a, K = String, KB = str>
 where
-    K: Borrow<KB> + Debug + 'static,
-    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+    K: Borrow<KB> + Debug + Send + Sync + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + Send + Sync + 'static,
 {
     Node {
         iter: SliceIter<'a, StringMapEntry<K, KB>>,
@@ -237,8 +235,8 @@ where
 
 impl<K, KB> StringMapIter<'_, K, KB>
 where
-    K: Borrow<KB> + Debug + 'static,
-    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+    K: Borrow<KB> + Debug + Send + Sync + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + Send + Sync + 'static,
 {
     pub fn new() -> Self {
         Self::None
@@ -247,8 +245,8 @@ where
 
 impl<K, KB> Default for StringMapIter<'_, K, KB>
 where
-    K: Borrow<KB> + Debug + 'static,
-    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+    K: Borrow<KB> + Debug + Send + Sync + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + Send + Sync + 'static,
 {
     fn default() -> Self {
         Self::new()
@@ -257,8 +255,8 @@ where
 
 impl<'a, K, KB> From<SliceIter<'a, StringMapEntry<K, KB>>> for StringMapIter<'a, K, KB>
 where
-    K: Borrow<KB> + Debug + 'static,
-    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+    K: Borrow<KB> + Debug + Send + Sync + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + Send + Sync + 'static,
 {
     fn from(iter: SliceIter<'a, StringMapEntry<K, KB>>) -> Self {
         Self::Node { iter, next: None }
@@ -267,8 +265,8 @@ where
 
 impl<'a, K, KB> Iterator for StringMapIter<'a, K, KB>
 where
-    K: Borrow<KB> + Debug + 'static,
-    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+    K: Borrow<KB> + Debug + Send + Sync + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + Send + Sync + 'static,
 {
     type Item = &'a StringMapEntry<K, KB>;
 
@@ -288,8 +286,8 @@ where
 
 impl<'a, K, KB> Iter<'a> for StringMapIter<'a, K, KB>
 where
-    K: Borrow<KB> + Debug + 'static,
-    KB: Debug + Display + Eq + Hash + ?Sized + 'static,
+    K: Borrow<KB> + Debug + Send + Sync + 'static,
+    KB: Debug + Display + Eq + Hash + ?Sized + Send + Sync + 'static,
 {
     type Context = StringMapContext<K, KB>;
 

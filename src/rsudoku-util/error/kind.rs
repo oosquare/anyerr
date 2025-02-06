@@ -1,7 +1,9 @@
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 use std::hash::Hash;
 
-pub trait Kind: Debug + Display + Clone + Copy + PartialEq + Eq + Hash + Default {
+pub trait Kind:
+    Debug + Display + Clone + Copy + PartialEq + Eq + Hash + Default + Send + Sync
+{
     const RAW_KIND: Self;
 
     const UNKNOWN_KIND: Self;
