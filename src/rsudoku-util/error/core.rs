@@ -5,7 +5,7 @@ use std::backtrace::Backtrace;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
-use super::context::{AbstractContext, Context, ContextDepth, StringContext, StringMapContext};
+use super::context::{AbstractContext, ContextDepth, StringContext};
 use super::kind::Kind;
 
 use data::{ErrorData, ErrorDataBuilder};
@@ -298,7 +298,7 @@ mod tests {
             let mut err = DefaultAnyError::from(DefaultErrorData::Layered {
                 kind: DefaultAnyErrorKind::Unknown,
                 message: "error".into(),
-                context: StringMapContext::new(),
+                context: StringKeyStringMapContext::new(),
                 source,
             });
             assert!(err.downcast_ref::<DefaultAnyError>().is_some());

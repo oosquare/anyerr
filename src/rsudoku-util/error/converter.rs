@@ -1,5 +1,4 @@
 use std::fmt::Debug;
-use std::marker::PhantomData;
 
 pub trait Converter<S, T> {
     fn convert(source: S) -> T;

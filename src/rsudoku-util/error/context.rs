@@ -1,18 +1,17 @@
 #![allow(private_bounds)]
 
-pub mod string_map;
+pub mod map;
 pub mod unit;
-
-pub use string_map::{LiteralKeyStringMapContext, StringKeyStringMapContext, StringMapContext};
-pub use unit::UnitContext;
 
 use std::any::Any;
 use std::borrow::Borrow;
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
-use std::marker::PhantomData;
 
 use super::converter::Converter;
+
+pub use map::{AnyValue, LiteralKeyStringMapContext, StringKeyStringMapContext};
+pub use unit::UnitContext;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ContextDepth {
@@ -76,7 +75,10 @@ where
 
 pub trait AnyContext
 where
-    Self: Context<Value = Box<dyn Any>, Entry: Entry<ValueBorrowed = dyn Any>>,
+    Self: Context<
+        Value = Box<dyn AnyValue + Send + Sync + 'static>,
+        Entry: Entry<ValueBorrowed = dyn AnyValue + Send + Sync + 'static>,
+    >,
     Self: Sealed,
 {
     fn access<Q, T>(&self, key: &Q) -> Option<&T>
@@ -99,12 +101,12 @@ pub trait ExtensibleContext: Context {
     }
 }
 
-pub trait Entry {
-    type Key: Borrow<Self::KeyBorrowed> + Debug + Send + Sync;
+pub trait Entry: Debug + Send + Sync {
+    type Key: Borrow<Self::KeyBorrowed> + Debug + Send + Sync + 'static;
 
     type KeyBorrowed: Debug + Display + Eq + Hash + ?Sized + Send + Sync;
 
-    type Value: Borrow<Self::ValueBorrowed> + Debug + Send + Sync;
+    type Value: Borrow<Self::ValueBorrowed> + Debug + Send + Sync + 'static;
 
     type ValueBorrowed: Debug + ?Sized + Send + Sync;
 

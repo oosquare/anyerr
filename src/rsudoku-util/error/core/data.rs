@@ -2,9 +2,7 @@ use std::backtrace::Backtrace;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
-use crate::error::context::{
-    AbstractContext, Context, ContextDepth, Iter, StringContext, StringMapContext,
-};
+use crate::error::context::{AbstractContext, ContextDepth, Iter, StringContext};
 use crate::error::converter::DebugConverter;
 use crate::error::kind::Kind;
 
@@ -180,7 +178,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::error::context::string_map::LiteralKeyStringMapEntry;
+    use crate::error::context::map::LiteralKeyStringMapEntry;
     use crate::error::context::{Entry, LiteralKeyStringMapContext};
     use crate::error::kind::DefaultAnyErrorKind;
 
@@ -197,7 +195,7 @@ mod tests {
                 kind: DefaultAnyErrorKind::Unknown,
                 message: "simple".into(),
                 backtrace: Backtrace::capture(),
-                context: StringMapContext::new(),
+                context: LiteralKeyStringMapContext::new(),
             };
             assert_eq!(data.message(), "simple");
             assert_eq!(data.to_string(), "simple");
@@ -206,12 +204,12 @@ mod tests {
             let data = DefaultErrorData::Layered {
                 kind: DefaultAnyErrorKind::Unknown,
                 message: "layered".into(),
-                context: StringMapContext::new(),
+                context: LiteralKeyStringMapContext::new(),
                 source: AnyError::from(DefaultErrorData::Simple {
                     kind: DefaultAnyErrorKind::Unknown,
                     message: "simple".into(),
                     backtrace: Backtrace::capture(),
-                    context: StringMapContext::new(),
+                    context: LiteralKeyStringMapContext::new(),
                 }),
             };
             assert_eq!(data.message(), "layered");
@@ -234,7 +232,7 @@ mod tests {
                 kind: DefaultAnyErrorKind::Unknown,
                 message: "simple".into(),
                 backtrace: Backtrace::capture(),
-                context: StringMapContext::from(vec![("key", "1")]),
+                context: LiteralKeyStringMapContext::from(vec![("key", "1")]),
             };
 
             let mut iter = data.context(ContextDepth::All);
@@ -255,12 +253,12 @@ mod tests {
             let data = DefaultErrorData::Layered {
                 kind: DefaultAnyErrorKind::Unknown,
                 message: "layered".into(),
-                context: StringMapContext::from(vec![("key2", "2")]),
+                context: LiteralKeyStringMapContext::from(vec![("key2", "2")]),
                 source: AnyError::from(DefaultErrorData::Simple {
                     kind: DefaultAnyErrorKind::Unknown,
                     message: "simple".into(),
                     backtrace: Backtrace::capture(),
-                    context: StringMapContext::from(vec![("key1", "1")]),
+                    context: LiteralKeyStringMapContext::from(vec![("key1", "1")]),
                 }),
             };
 
@@ -315,7 +313,7 @@ mod tests {
                     kind: DefaultAnyErrorKind::Unknown,
                     message: "simple".into(),
                     backtrace: Backtrace::capture(),
-                    context: StringMapContext::from(vec![("key1", "1")]),
+                    context: LiteralKeyStringMapContext::from(vec![("key1", "1")]),
                 }))
                 .build(Backtrace::capture());
             assert_eq!(data.kind(), DefaultAnyErrorKind::default());
