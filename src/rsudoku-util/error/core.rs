@@ -5,7 +5,8 @@ use std::backtrace::Backtrace;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
-use super::context::{AbstractContext, ContextDepth, StringContext};
+use super::context::{AbstractContext, Context, ContextDepth};
+use super::converter::Convertable;
 use super::kind::Kind;
 
 use data::{ErrorData, ErrorDataBuilder};
@@ -227,13 +228,13 @@ where
 
 impl<C, K> AnyErrorBuilder<C, K>
 where
-    C: StringContext + 'static,
+    C: Context + 'static,
     K: Kind + 'static,
 {
-    pub fn context<Q, V>(self, key: Q, value: V) -> Self
+    pub fn context<Q, R>(self, key: Q, value: R) -> Self
     where
         Q: Into<C::Key>,
-        V: Debug,
+        R: Convertable<C::Converter, C::Value>,
     {
         Self(self.0.context(key, value))
     }

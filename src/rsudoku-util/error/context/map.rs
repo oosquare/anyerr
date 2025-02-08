@@ -11,31 +11,34 @@ use std::marker::PhantomData;
 use std::slice::Iter as SliceIter;
 
 use crate::error::context::{AbstractContext, Context, Entry, Iter};
+use crate::error::converter::Converter;
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct MapContext<E: Entry> {
+pub struct MapContext<E: Entry, C: Converter> {
     entries: Vec<E>,
+    _phantom: PhantomData<C>,
 }
 
-impl<E: Entry> MapContext<E> {
+impl<E: Entry, C: Converter> MapContext<E, C> {
     pub fn new() -> Self {
-        Self {
-            entries: Vec::new(),
-        }
+        Self::from(Vec::<E>::new())
     }
 
-    pub fn iter(&self) -> MapIter<'_, E> {
+    pub fn iter(&self) -> MapIter<'_, E, C> {
         self.entries.iter().into()
     }
 }
 
-impl<E: Entry> From<Vec<E>> for MapContext<E> {
+impl<E: Entry, C: Converter> From<Vec<E>> for MapContext<E, C> {
     fn from(entries: Vec<E>) -> Self {
-        Self { entries }
+        Self {
+            entries,
+            _phantom: Default::default(),
+        }
     }
 }
 
-impl<E: Entry, Q, R> From<Vec<(Q, R)>> for MapContext<E>
+impl<E: Entry, C: Converter, Q, R> From<Vec<(Q, R)>> for MapContext<E, C>
 where
     Q: Into<<Self as AbstractContext>::Key>,
     R: Into<<Self as AbstractContext>::Value>,
@@ -45,15 +48,13 @@ where
     }
 }
 
-impl<E: Entry> FromIterator<E> for MapContext<E> {
+impl<E: Entry, C: Converter> FromIterator<E> for MapContext<E, C> {
     fn from_iter<T: IntoIterator<Item = E>>(iter: T) -> Self {
-        Self {
-            entries: iter.into_iter().collect(),
-        }
+        iter.into_iter().collect::<Vec<_>>().into()
     }
 }
 
-impl<E: Entry, Q, R> FromIterator<(Q, R)> for MapContext<E>
+impl<E: Entry, C: Converter, Q, R> FromIterator<(Q, R)> for MapContext<E, C>
 where
     Q: Into<<Self as AbstractContext>::Key>,
     R: Into<<Self as AbstractContext>::Value>,
@@ -65,13 +66,13 @@ where
     }
 }
 
-impl<E: Entry> Default for MapContext<E> {
+impl<E: Entry, C: Converter> Default for MapContext<E, C> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<E: Entry> AbstractContext for MapContext<E> {
+impl<E: Entry, C: Converter> AbstractContext for MapContext<E, C> {
     type Key = E::Key;
 
     type Value = E::Value;
@@ -79,7 +80,7 @@ impl<E: Entry> AbstractContext for MapContext<E> {
     type Entry = E;
 
     type Iter<'a>
-        = MapIter<'a, E>
+        = MapIter<'a, E, C>
     where
         E: 'a;
 
@@ -88,7 +89,9 @@ impl<E: Entry> AbstractContext for MapContext<E> {
     }
 }
 
-impl<E: Entry> Context for MapContext<E> {
+impl<E: Entry, C: Converter> Context for MapContext<E, C> {
+    type Converter = C;
+
     fn insert<Q, R>(&mut self, key: Q, value: R)
     where
         Q: Into<Self::Key>,
@@ -173,37 +176,42 @@ where
 }
 
 #[derive(Debug)]
-pub enum MapIter<'a, E: Entry> {
+pub enum MapIter<'a, E: Entry, C: Converter> {
     Node {
         iter: SliceIter<'a, E>,
-        next: Option<Box<MapIter<'a, E>>>,
+        next: Option<Box<MapIter<'a, E, C>>>,
+        _phantom: PhantomData<C>,
     },
     None,
 }
 
-impl<E: Entry> MapIter<'_, E> {
+impl<E: Entry, C: Converter> MapIter<'_, E, C> {
     pub fn new() -> Self {
         Self::None
     }
 }
 
-impl<E: Entry> Default for MapIter<'_, E> {
+impl<E: Entry, C: Converter> Default for MapIter<'_, E, C> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<'a, E: Entry> From<SliceIter<'a, E>> for MapIter<'a, E> {
+impl<'a, E: Entry, C: Converter> From<SliceIter<'a, E>> for MapIter<'a, E, C> {
     fn from(iter: SliceIter<'a, E>) -> Self {
-        Self::Node { iter, next: None }
+        Self::Node {
+            iter,
+            next: None,
+            _phantom: Default::default(),
+        }
     }
 }
 
-impl<'a, E: Entry> Iterator for MapIter<'a, E> {
+impl<'a, E: Entry, C: Converter> Iterator for MapIter<'a, E, C> {
     type Item = &'a E;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Self::Node { iter, next } = self {
+        while let Self::Node { iter, next, .. } = self {
             if let Some(item) = iter.next() {
                 return Some(item);
             } else if let Some(next) = next.take() {
@@ -216,8 +224,8 @@ impl<'a, E: Entry> Iterator for MapIter<'a, E> {
     }
 }
 
-impl<'a, E: Entry> Iter<'a> for MapIter<'a, E> {
-    type Context = MapContext<E>;
+impl<'a, E: Entry, C: Converter> Iter<'a> for MapIter<'a, E, C> {
+    type Context = MapContext<E, C>;
 
     type Entry = E;
 
@@ -226,13 +234,15 @@ impl<'a, E: Entry> Iter<'a> for MapIter<'a, E> {
             return self;
         }
         let iter = context.entries.iter();
-        if let Self::None = self {
-            Self::Node { iter, next: None }
+        let next = if let Self::None = self {
+            None
         } else {
-            Self::Node {
-                iter,
-                next: Some(Box::new(self)),
-            }
+            Some(Box::new(self))
+        };
+        Self::Node {
+            iter,
+            next,
+            _phantom: Default::default(),
         }
     }
 }
@@ -244,7 +254,7 @@ mod tests {
     use super::*;
 
     type TestEntry = MapEntry<String, str, String, str>;
-    type TestContext = MapContext<TestEntry>;
+    type TestContext = MapContext<TestEntry, DebugConverter>;
 
     #[test]
     fn string_entry_getter_succeeds() {
@@ -257,8 +267,8 @@ mod tests {
     fn string_map_context_operation_succeeds() {
         let mut context = TestContext::new();
         context.insert("key1", "1");
-        context.insert_with(DebugConverter, "key2", 2);
-        context.insert_with(DebugConverter, "key3", "3");
+        context.insert_with::<DebugConverter, _, _>("key2", 2);
+        context.insert_with::<DebugConverter, _, _>("key3", "3");
         assert_eq!(context.get("key1").unwrap(), "1");
         assert_eq!(context.get("key2").unwrap(), "2");
         assert_eq!(context.get("key3").unwrap(), "\"3\"");

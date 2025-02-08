@@ -1,6 +1,8 @@
 use std::any::Any;
 use std::fmt::Debug;
 
+pub type DynAnyValue = dyn AnyValue + Send + Sync + 'static;
+
 pub trait AnyValue: Any + Debug + Send + Sync {
     fn as_any(&self) -> &dyn Any;
 }

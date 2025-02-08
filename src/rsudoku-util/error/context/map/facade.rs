@@ -3,13 +3,14 @@ use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 use std::hash::Hash;
 
 use crate::error::context::{AbstractContext, AnyContext, Entry, Sealed, StringContext};
+use crate::error::converter::{BoxConverter, DebugConverter};
 
-use super::any::AnyValue;
+use super::any::DynAnyValue;
 use super::{MapContext, MapEntry, MapIter};
 
 pub type StringMapEntry<K, KB> = MapEntry<K, KB, String, str>;
-pub type StringMapContext<K, KB> = MapContext<StringMapEntry<K, KB>>;
-pub type StringMapIter<'a, K, KB> = MapIter<'a, StringMapEntry<K, KB>>;
+pub type StringMapContext<K, KB> = MapContext<StringMapEntry<K, KB>, DebugConverter>;
+pub type StringMapIter<'a, K, KB> = MapIter<'a, StringMapEntry<K, KB>, DebugConverter>;
 
 pub type StringKeyStringMapContext = StringMapContext<String, str>;
 pub type StringKeyStringMapEntry = <StringKeyStringMapContext as AbstractContext>::Entry;
@@ -19,14 +20,9 @@ pub type LiteralKeyStringMapContext = StringMapContext<&'static str, str>;
 pub type LiteralKeyStringMapEntry = <LiteralKeyStringMapContext as AbstractContext>::Entry;
 pub type LiteralKeyStringMapIter<'a> = <LiteralKeyStringMapContext as AbstractContext>::Iter<'a>;
 
-pub type AnyMapEntry<K, KB> = MapEntry<
-    K,
-    KB,
-    Box<dyn AnyValue + Send + Sync + 'static>,
-    dyn AnyValue + Send + Sync + 'static,
->;
-pub type AnyMapContext<K, KB> = MapContext<AnyMapEntry<K, KB>>;
-pub type AnyMapIter<'a, K, KB> = MapIter<'a, AnyMapEntry<K, KB>>;
+pub type AnyMapEntry<K, KB> = MapEntry<K, KB, Box<DynAnyValue>, DynAnyValue>;
+pub type AnyMapContext<K, KB> = MapContext<AnyMapEntry<K, KB>, BoxConverter>;
+pub type AnyMapIter<'a, K, KB> = MapIter<'a, AnyMapEntry<K, KB>, BoxConverter>;
 
 impl<K, KB> Display for StringMapEntry<K, KB>
 where

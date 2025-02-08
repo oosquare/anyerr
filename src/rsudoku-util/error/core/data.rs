@@ -2,8 +2,8 @@ use std::backtrace::Backtrace;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
-use crate::error::context::{AbstractContext, ContextDepth, Iter, StringContext};
-use crate::error::converter::DebugConverter;
+use crate::error::context::{AbstractContext, Context, ContextDepth, Iter};
+use crate::error::converter::Convertable;
 use crate::error::kind::Kind;
 
 use super::AnyError;
@@ -163,15 +163,15 @@ where
 
 impl<C, K> ErrorDataBuilder<C, K>
 where
-    C: StringContext + 'static,
+    C: Context + 'static,
     K: Kind + 'static,
 {
-    pub fn context<Q, V>(mut self, key: Q, value: V) -> Self
+    pub fn context<Q, R>(mut self, key: Q, value: R) -> Self
     where
         Q: Into<C::Key>,
-        V: Debug,
+        R: Convertable<C::Converter, C::Value>,
     {
-        self.context.insert_with(DebugConverter, key, value);
+        self.context.insert_with::<C::Converter, _, _>(key, value);
         self
     }
 }
