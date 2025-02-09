@@ -68,12 +68,10 @@ impl Entry for DummyEntry {
     }
 }
 
-#[derive(Debug)]
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct UnitIter<'a> {
     _phantom: PhantomData<&'a ()>,
 }
-
 
 impl<'a> Iterator for UnitIter<'a> {
     type Item = &'a DummyEntry;
@@ -84,11 +82,9 @@ impl<'a> Iterator for UnitIter<'a> {
 }
 
 impl<'a> Iter<'a> for UnitIter<'a> {
-    type Context = UnitContext;
-
     type Entry = DummyEntry;
 
-    fn concat(self, _context: &'a Self::Context) -> Self {
+    fn compose(self, _other: Self) -> Self {
         self
     }
 }

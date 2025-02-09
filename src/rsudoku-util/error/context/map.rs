@@ -10,8 +10,11 @@ use std::hash::Hash;
 use std::marker::PhantomData;
 use std::slice::Iter as SliceIter;
 
-use crate::error::context::{AbstractContext, Context, Entry, Iter};
+use crate::error::context::iter::CommonIter;
+use crate::error::context::{AbstractContext, Context, Entry};
 use crate::error::converter::Converter;
+
+pub type MapIter<'a, E> = CommonIter<'a, E, SliceIter<'a, E>>;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct MapContext<E: Entry, C: Converter> {
@@ -24,7 +27,7 @@ impl<E: Entry, C: Converter> MapContext<E, C> {
         Self::from(Vec::<E>::new())
     }
 
-    pub fn iter(&self) -> MapIter<'_, E, C> {
+    pub fn iter(&self) -> MapIter<'_, E> {
         self.entries.iter().into()
     }
 }
@@ -80,7 +83,7 @@ impl<E: Entry, C: Converter> AbstractContext for MapContext<E, C> {
     type Entry = E;
 
     type Iter<'a>
-        = MapIter<'a, E, C>
+        = MapIter<'a, E>
     where
         E: 'a;
 
@@ -103,12 +106,12 @@ impl<E: Entry, C: Converter> Context for MapContext<E, C> {
     fn get<Q>(&self, key: &Q) -> Option<&<Self::Entry as Entry>::ValueBorrowed>
     where
         <Self::Entry as Entry>::KeyBorrowed: Borrow<Q>,
-        Q: Debug + Display + Eq + Hash + ?Sized,
+        Q: Debug + Eq + Hash + ?Sized,
     {
         self.entries
             .iter()
             .find(|entry| entry.key().borrow() == key)
-            .map(|entry| entry.value())
+            .map(Entry::value)
     }
 }
 
@@ -175,80 +178,9 @@ where
     }
 }
 
-#[derive(Debug)]
-pub enum MapIter<'a, E: Entry, C: Converter> {
-    Node {
-        iter: SliceIter<'a, E>,
-        next: Option<Box<MapIter<'a, E, C>>>,
-        _phantom: PhantomData<C>,
-    },
-    None,
-}
-
-impl<E: Entry, C: Converter> MapIter<'_, E, C> {
-    pub fn new() -> Self {
-        Self::None
-    }
-}
-
-impl<E: Entry, C: Converter> Default for MapIter<'_, E, C> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<'a, E: Entry, C: Converter> From<SliceIter<'a, E>> for MapIter<'a, E, C> {
-    fn from(iter: SliceIter<'a, E>) -> Self {
-        Self::Node {
-            iter,
-            next: None,
-            _phantom: Default::default(),
-        }
-    }
-}
-
-impl<'a, E: Entry, C: Converter> Iterator for MapIter<'a, E, C> {
-    type Item = &'a E;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        while let Self::Node { iter, next, .. } = self {
-            if let Some(item) = iter.next() {
-                return Some(item);
-            } else if let Some(next) = next.take() {
-                *self = *next;
-            } else {
-                *self = Self::None;
-            }
-        }
-        None
-    }
-}
-
-impl<'a, E: Entry, C: Converter> Iter<'a> for MapIter<'a, E, C> {
-    type Context = MapContext<E, C>;
-
-    type Entry = E;
-
-    fn concat(self, context: &'a Self::Context) -> Self {
-        if context.entries.is_empty() {
-            return self;
-        }
-        let iter = context.entries.iter();
-        let next = if let Self::None = self {
-            None
-        } else {
-            Some(Box::new(self))
-        };
-        Self::Node {
-            iter,
-            next,
-            _phantom: Default::default(),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
+    use crate::error::context::Iter;
     use crate::error::converter::DebugConverter;
 
     use super::*;
@@ -296,7 +228,7 @@ mod tests {
             TestEntry::new("key3", "3"),
             TestEntry::new("key4", "4"),
         ]);
-        let mut iter = context2.iter().concat(&context1);
+        let mut iter = context1.iter().compose(context2.iter());
         assert_eq!(Some(&TestEntry::new("key1", "1")), iter.next());
         assert_eq!(Some(&TestEntry::new("key2", "2")), iter.next());
         assert_eq!(Some(&TestEntry::new("key3", "3")), iter.next());

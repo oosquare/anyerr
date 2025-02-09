@@ -1,4 +1,6 @@
+pub mod iter;
 pub mod map;
+pub mod singleton;
 pub mod unit;
 
 use std::any::Any;
@@ -24,7 +26,7 @@ pub trait AbstractContext: Default + Debug + Send + Sync {
 
     type Entry: Entry<Key = Self::Key, Value = Self::Value>;
 
-    type Iter<'a>: Iter<'a, Context = Self, Entry = Self::Entry>
+    type Iter<'a>: Iter<'a, Entry = Self::Entry>
     where
         Self: 'a;
 
@@ -54,7 +56,7 @@ pub trait Context: AbstractContext {
     fn get<Q>(&self, key: &Q) -> Option<&<Self::Entry as Entry>::ValueBorrowed>
     where
         <Self::Entry as Entry>::KeyBorrowed: Borrow<Q>,
-        Q: Debug + Display + Eq + Hash + ?Sized;
+        Q: Debug + Eq + Hash + ?Sized;
 }
 
 #[allow(private_bounds)]
@@ -79,7 +81,7 @@ where
     fn value_as<T, Q>(&self, key: &Q) -> Option<&T>
     where
         <Self::Entry as Entry>::KeyBorrowed: Borrow<Q>,
-        Q: Debug + Display + Eq + Hash + ?Sized,
+        Q: Debug + Eq + Hash + ?Sized,
         T: Any,
     {
         self.get(key).and_then(|value| value.downcast_ref::<T>())
@@ -106,11 +108,9 @@ pub trait Entry: Debug + Send + Sync {
 }
 
 pub trait Iter<'a>: Default + Iterator<Item = &'a Self::Entry> {
-    type Context: AbstractContext<Entry = Self::Entry, Iter<'a> = Self> + 'a;
-
     type Entry: 'a;
 
-    fn concat(self, context: &'a Self::Context) -> Self;
+    fn compose(self, other: Self) -> Self;
 }
 
 trait Sealed {}

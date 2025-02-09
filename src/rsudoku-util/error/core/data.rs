@@ -67,7 +67,7 @@ where
             Self::Layered {
                 context, source, ..
             } => match depth {
-                ContextDepth::All => source.context(depth).concat(context),
+                ContextDepth::All => context.iter().compose(source.context(depth)),
                 ContextDepth::Shallowest => context.iter(),
             },
             Self::Wrapped { .. } => C::Iter::default(),

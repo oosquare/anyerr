@@ -10,7 +10,7 @@ use super::{MapContext, MapEntry, MapIter};
 
 pub type StringMapEntry<K, KB> = MapEntry<K, KB, String, str>;
 pub type StringMapContext<K, KB> = MapContext<StringMapEntry<K, KB>, DebugConverter>;
-pub type StringMapIter<'a, K, KB> = MapIter<'a, StringMapEntry<K, KB>, DebugConverter>;
+pub type StringMapIter<'a, K, KB> = MapIter<'a, StringMapEntry<K, KB>>;
 
 pub type StringKeyStringMapContext = StringMapContext<String, str>;
 pub type StringKeyStringMapEntry = <StringKeyStringMapContext as AbstractContext>::Entry;
@@ -22,7 +22,7 @@ pub type LiteralKeyStringMapIter<'a> = <LiteralKeyStringMapContext as AbstractCo
 
 pub type AnyMapEntry<K, KB> = MapEntry<K, KB, Box<DynAnyValue>, DynAnyValue>;
 pub type AnyMapContext<K, KB> = MapContext<AnyMapEntry<K, KB>, BoxConverter>;
-pub type AnyMapIter<'a, K, KB> = MapIter<'a, AnyMapEntry<K, KB>, BoxConverter>;
+pub type AnyMapIter<'a, K, KB> = MapIter<'a, AnyMapEntry<K, KB>>;
 
 impl<K, KB> Display for StringMapEntry<K, KB>
 where
