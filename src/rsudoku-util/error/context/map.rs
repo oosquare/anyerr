@@ -119,9 +119,9 @@ impl<E: Entry, C: Converter> Context for MapContext<E, C> {
 pub struct MapEntry<K, KB, V, VB>
 where
     K: Borrow<KB> + Debug + Send + Sync + 'static,
-    KB: Debug + Display + Eq + Hash + ?Sized + Send + Sync,
+    KB: Debug + Display + Eq + Hash + ?Sized + Send + Sync + 'static,
     V: Borrow<VB> + Debug + Send + Sync + 'static,
-    VB: Debug + ?Sized + Send + Sync,
+    VB: Debug + ?Sized + Send + Sync + 'static,
 {
     key: K,
     value: V,
@@ -131,9 +131,9 @@ where
 impl<K, KB, V, VB, Q, R> From<(Q, R)> for MapEntry<K, KB, V, VB>
 where
     K: Borrow<KB> + Debug + Send + Sync + 'static,
-    KB: Debug + Display + Eq + Hash + ?Sized + Send + Sync,
+    KB: Debug + Display + Eq + Hash + ?Sized + Send + Sync + 'static,
     V: Borrow<VB> + Debug + Send + Sync + 'static,
-    VB: Debug + ?Sized + Send + Sync,
+    VB: Debug + ?Sized + Send + Sync + 'static,
     Q: Into<<Self as Entry>::Key>,
     R: Into<<Self as Entry>::Value>,
 {
@@ -145,9 +145,9 @@ where
 impl<K, KB, V, VB> Entry for MapEntry<K, KB, V, VB>
 where
     K: Borrow<KB> + Debug + Send + Sync + 'static,
-    KB: Debug + Display + Eq + Hash + ?Sized + Send + Sync,
+    KB: Debug + Display + Eq + Hash + ?Sized + Send + Sync + 'static,
     V: Borrow<VB> + Debug + Send + Sync + 'static,
-    VB: Debug + ?Sized + Send + Sync,
+    VB: Debug + ?Sized + Send + Sync + 'static,
 {
     type Key = K;
 

@@ -107,7 +107,7 @@ where
 pub struct OptionEntry<V, VB>
 where
     V: Borrow<VB> + Debug + Send + Sync + 'static,
-    VB: Debug + ?Sized + Send + Sync,
+    VB: Debug + ?Sized + Send + Sync + 'static,
 {
     value: V,
     _phantom: PhantomData<Box<VB>>,
@@ -116,7 +116,7 @@ where
 impl<V, VB> From<V> for OptionEntry<V, VB>
 where
     V: Borrow<VB> + Debug + Send + Sync + 'static,
-    VB: Debug + ?Sized + Send + Sync,
+    VB: Debug + ?Sized + Send + Sync + 'static,
 {
     fn from(value: V) -> Self {
         Self::new(OptionKey::SELF_VALUE, value)
@@ -126,7 +126,7 @@ where
 impl<V, VB> Entry for OptionEntry<V, VB>
 where
     V: Borrow<VB> + Debug + Send + Sync + 'static,
-    VB: Debug + ?Sized + Send + Sync,
+    VB: Debug + ?Sized + Send + Sync + 'static,
 {
     type Key = OptionKey;
 

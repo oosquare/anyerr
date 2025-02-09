@@ -15,7 +15,7 @@ pub use map::{AnyValue, DynAnyValue};
 pub use singleton::OptionContext;
 pub use unit::UnitContext;
 
-pub trait AbstractContext: Default + Debug + Send + Sync {
+pub trait AbstractContext: Default + Debug + Send + Sync + 'static {
     type Key;
 
     type Value;
@@ -84,14 +84,14 @@ where
     }
 }
 
-pub trait Entry: Debug + Send + Sync {
+pub trait Entry: Debug + Send + Sync + 'static {
     type Key: Borrow<Self::KeyBorrowed> + Debug + Send + Sync + 'static;
 
-    type KeyBorrowed: Debug + Display + Eq + Hash + ?Sized + Send + Sync;
+    type KeyBorrowed: Debug + Display + Eq + Hash + ?Sized + Send + Sync + 'static;
 
     type Value: Borrow<Self::ValueBorrowed> + Debug + Send + Sync + 'static;
 
-    type ValueBorrowed: Debug + ?Sized + Send + Sync;
+    type ValueBorrowed: Debug + ?Sized + Send + Sync + 'static;
 
     fn new<Q, R>(key: Q, value: R) -> Self
     where

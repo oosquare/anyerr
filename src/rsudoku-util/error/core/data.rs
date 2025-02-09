@@ -13,8 +13,8 @@ use crate::error::kind::Kind;
 #[derive(Debug)]
 pub enum ErrorData<C, K>
 where
-    C: AbstractContext + 'static,
-    K: Kind + 'static,
+    C: AbstractContext,
+    K: Kind,
 {
     Simple {
         kind: K,
@@ -36,8 +36,8 @@ where
 
 impl<C, K> ErrorData<C, K>
 where
-    C: AbstractContext + 'static,
-    K: Kind + 'static,
+    C: AbstractContext,
+    K: Kind,
 {
     pub fn kind(&self) -> K {
         match self {
@@ -79,8 +79,8 @@ where
 
 impl<C, K> ErrorData<C, K>
 where
-    C: crate::error::context::SingletonContext + 'static,
-    K: Kind + 'static,
+    C: crate::error::context::SingletonContext,
+    K: Kind,
 {
     pub fn value(&self) -> Option<&<C::Entry as Entry>::ValueBorrowed> {
         match self {
@@ -93,8 +93,8 @@ where
 
 impl<C, K> ErrorData<C, K>
 where
-    C: crate::error::context::StringContext + 'static,
-    K: Kind + 'static,
+    C: crate::error::context::StringContext,
+    K: Kind,
 {
     pub fn get<Q>(&self, key: &Q) -> Option<&<C::Entry as Entry>::ValueBorrowed>
     where
@@ -111,8 +111,8 @@ where
 
 impl<C, K> ErrorData<C, K>
 where
-    C: crate::error::context::AnyContext + 'static,
-    K: Kind + 'static,
+    C: crate::error::context::AnyContext,
+    K: Kind,
 {
     pub fn value_as<T, Q>(&self, key: &Q) -> Option<&T>
     where
@@ -130,8 +130,8 @@ where
 
 impl<C, K> Display for ErrorData<C, K>
 where
-    C: AbstractContext + 'static,
-    K: Kind + 'static,
+    C: AbstractContext,
+    K: Kind,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         match self {
@@ -144,8 +144,8 @@ where
 
 impl<C, K> Error for ErrorData<C, K>
 where
-    C: AbstractContext + 'static,
-    K: Kind + 'static,
+    C: AbstractContext,
+    K: Kind,
 {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
@@ -158,8 +158,8 @@ where
 
 pub struct ErrorDataBuilder<C, K>
 where
-    C: AbstractContext + 'static,
-    K: Kind + 'static,
+    C: AbstractContext,
+    K: Kind,
 {
     kind: K,
     message: String,
@@ -169,8 +169,8 @@ where
 
 impl<C, K> ErrorDataBuilder<C, K>
 where
-    C: AbstractContext + 'static,
-    K: Kind + 'static,
+    C: AbstractContext,
+    K: Kind,
 {
     pub fn new() -> Self {
         Self {
@@ -216,8 +216,8 @@ where
 
 impl<C, K> ErrorDataBuilder<C, K>
 where
-    C: Context + 'static,
-    K: Kind + 'static,
+    C: Context,
+    K: Kind,
 {
     pub fn context<Q, R>(mut self, key: Q, value: R) -> Self
     where

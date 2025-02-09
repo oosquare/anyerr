@@ -16,13 +16,13 @@ use data::{ErrorData, ErrorDataBuilder};
 #[derive(Debug)]
 pub struct AnyError<C, K>(Box<ErrorData<C, K>>)
 where
-    C: AbstractContext + 'static,
-    K: Kind + 'static;
+    C: AbstractContext,
+    K: Kind;
 
 impl<C, K> AnyError<C, K>
 where
-    C: AbstractContext + 'static,
-    K: Kind + 'static,
+    C: AbstractContext,
+    K: Kind,
 {
     pub fn minimal<S: Into<String>>(message: S) -> Self {
         Self::from(ErrorData::<C, K>::Simple {
@@ -147,8 +147,8 @@ where
 
 impl<C, K> AnyError<C, K>
 where
-    C: crate::error::context::SingletonContext + 'static,
-    K: Kind + 'static,
+    C: crate::error::context::SingletonContext,
+    K: Kind,
 {
     pub fn value(&self) -> Option<&<C::Entry as Entry>::ValueBorrowed> {
         self.0.value()
@@ -157,8 +157,8 @@ where
 
 impl<C, K> AnyError<C, K>
 where
-    C: crate::error::context::StringContext + 'static,
-    K: Kind + 'static,
+    C: crate::error::context::StringContext,
+    K: Kind,
 {
     pub fn get<Q>(&self, key: &Q) -> Option<&<C::Entry as Entry>::ValueBorrowed>
     where
@@ -171,8 +171,8 @@ where
 
 impl<C, K> AnyError<C, K>
 where
-    C: crate::error::context::AnyContext + 'static,
-    K: Kind + 'static,
+    C: crate::error::context::AnyContext,
+    K: Kind,
 {
     pub fn value_as<T, Q>(&self, key: &Q) -> Option<&T>
     where
@@ -185,8 +185,8 @@ where
 }
 impl<C, K> From<ErrorData<C, K>> for AnyError<C, K>
 where
-    C: AbstractContext + 'static,
-    K: Kind + 'static,
+    C: AbstractContext,
+    K: Kind,
 {
     fn from(data: ErrorData<C, K>) -> Self {
         Self(Box::new(data))
@@ -195,8 +195,8 @@ where
 
 impl<C, K> Display for AnyError<C, K>
 where
-    C: AbstractContext + 'static,
-    K: Kind + 'static,
+    C: AbstractContext,
+    K: Kind,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         Display::fmt(&self.0, f)
@@ -205,8 +205,8 @@ where
 
 impl<C, K> Error for AnyError<C, K>
 where
-    C: AbstractContext + 'static,
-    K: Kind + 'static,
+    C: AbstractContext,
+    K: Kind,
 {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         self.0.source()
@@ -243,13 +243,13 @@ impl<E: Error + Any + Send + Sync> ErrorAndAny for E {
 
 pub struct AnyErrorBuilder<C, K>(ErrorDataBuilder<C, K>)
 where
-    C: AbstractContext + 'static,
-    K: Kind + 'static;
+    C: AbstractContext,
+    K: Kind;
 
 impl<C, K> AnyErrorBuilder<C, K>
 where
-    C: AbstractContext + 'static,
-    K: Kind + 'static,
+    C: AbstractContext,
+    K: Kind,
 {
     fn new() -> Self {
         Self(ErrorDataBuilder::new())
@@ -274,8 +274,8 @@ where
 
 impl<C, K> AnyErrorBuilder<C, K>
 where
-    C: Context + 'static,
-    K: Kind + 'static,
+    C: Context,
+    K: Kind,
 {
     pub fn context<Q, R>(self, key: Q, value: R) -> Self
     where
