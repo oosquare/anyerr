@@ -1,12 +1,14 @@
+use std::any::Any;
 use std::backtrace::Backtrace;
+use std::borrow::Borrow;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
+use std::hash::Hash;
 
-use crate::error::context::{AbstractContext, Context, ContextDepth, Iter};
+use crate::error::context::{AbstractContext, Context, Entry, Iter};
 use crate::error::converter::Convertable;
+use crate::error::core::{AnyError, ContextDepth};
 use crate::error::kind::Kind;
-
-use super::AnyError;
 
 #[derive(Debug)]
 pub enum ErrorData<C, K>
@@ -71,6 +73,57 @@ where
                 ContextDepth::Shallowest => context.iter(),
             },
             Self::Wrapped { .. } => C::Iter::default(),
+        }
+    }
+}
+
+impl<C, K> ErrorData<C, K>
+where
+    C: crate::error::context::SingletonContext + 'static,
+    K: Kind + 'static,
+{
+    pub fn value(&self) -> Option<&<C::Entry as Entry>::ValueBorrowed> {
+        match self {
+            Self::Simple { context, .. } => context.value(),
+            Self::Layered { context, .. } => context.value(),
+            Self::Wrapped { .. } => None,
+        }
+    }
+}
+
+impl<C, K> ErrorData<C, K>
+where
+    C: crate::error::context::StringContext + 'static,
+    K: Kind + 'static,
+{
+    pub fn get<Q>(&self, key: &Q) -> Option<&<C::Entry as Entry>::ValueBorrowed>
+    where
+        <C::Entry as Entry>::KeyBorrowed: Borrow<Q>,
+        Q: Debug + Eq + Hash + ?Sized,
+    {
+        match self {
+            Self::Simple { context, .. } => context.get(key),
+            Self::Layered { context, .. } => context.get(key),
+            Self::Wrapped { .. } => None,
+        }
+    }
+}
+
+impl<C, K> ErrorData<C, K>
+where
+    C: crate::error::context::AnyContext + 'static,
+    K: Kind + 'static,
+{
+    pub fn value_as<T, Q>(&self, key: &Q) -> Option<&T>
+    where
+        <C::Entry as Entry>::KeyBorrowed: Borrow<Q>,
+        Q: Debug + Eq + Hash + ?Sized,
+        T: Any,
+    {
+        match self {
+            Self::Simple { context, .. } => context.value_as::<T, _>(key),
+            Self::Layered { context, .. } => context.value_as::<T, _>(key),
+            Self::Wrapped { .. } => None,
         }
     }
 }

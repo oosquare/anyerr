@@ -71,3 +71,23 @@ where
     KB: Debug + Display + Eq + Hash + ?Sized + Send + Sync,
 {
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::error::context::Context;
+
+    use super::*;
+
+    type TestContext = AnyMapContext<&'static str, str>;
+
+    #[test]
+    fn any_map_context_operation() {
+        let mut ctx = TestContext::new();
+        ctx.insert_with::<BoxConverter, _, _>("i32", 1i32);
+        ctx.insert_with::<BoxConverter, _, _>("string", "test");
+        assert_eq!(ctx.value_as::<i32, _>("i32"), Some(&1i32));
+        assert_eq!(ctx.value_as::<&str, _>("string"), Some(&"test"));
+        assert_eq!(ctx.value_as::<(), _>("i32"), None);
+        assert_eq!(ctx.value_as::<(), _>("string"), None);
+    }
+}

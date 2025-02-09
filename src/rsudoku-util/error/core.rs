@@ -2,12 +2,14 @@ mod data;
 
 use std::any::{Any, TypeId};
 use std::backtrace::Backtrace;
+use std::borrow::Borrow;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
+use std::hash::Hash;
 
-use super::context::{AbstractContext, Context, ContextDepth};
-use super::converter::Convertable;
-use super::kind::Kind;
+use crate::error::context::{AbstractContext, Context, Entry};
+use crate::error::converter::Convertable;
+use crate::error::kind::Kind;
 
 use data::{ErrorData, ErrorDataBuilder};
 
@@ -143,6 +145,44 @@ where
     }
 }
 
+impl<C, K> AnyError<C, K>
+where
+    C: crate::error::context::SingletonContext + 'static,
+    K: Kind + 'static,
+{
+    pub fn value(&self) -> Option<&<C::Entry as Entry>::ValueBorrowed> {
+        self.0.value()
+    }
+}
+
+impl<C, K> AnyError<C, K>
+where
+    C: crate::error::context::StringContext + 'static,
+    K: Kind + 'static,
+{
+    pub fn get<Q>(&self, key: &Q) -> Option<&<C::Entry as Entry>::ValueBorrowed>
+    where
+        <C::Entry as Entry>::KeyBorrowed: Borrow<Q>,
+        Q: Debug + Eq + Hash + ?Sized,
+    {
+        self.0.get(key)
+    }
+}
+
+impl<C, K> AnyError<C, K>
+where
+    C: crate::error::context::AnyContext + 'static,
+    K: Kind + 'static,
+{
+    pub fn value_as<T, Q>(&self, key: &Q) -> Option<&T>
+    where
+        <C::Entry as Entry>::KeyBorrowed: Borrow<Q>,
+        Q: Debug + Eq + Hash + ?Sized,
+        T: Any,
+    {
+        self.0.value_as::<T, _>(key)
+    }
+}
 impl<C, K> From<ErrorData<C, K>> for AnyError<C, K>
 where
     C: AbstractContext + 'static,
@@ -171,6 +211,12 @@ where
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         self.0.source()
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ContextDepth {
+    All,
+    Shallowest,
 }
 
 trait ErrorAndAny: Error + Any + Send + Sync {

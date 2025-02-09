@@ -8,16 +8,12 @@ use std::borrow::Borrow;
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
 
-use super::converter::{Convertable, Converter};
+use crate::error::converter::{Convertable, Converter};
 
-pub use map::{AnyValue, DynAnyValue, LiteralKeyStringMapContext, StringKeyStringMapContext};
+pub use map::{AnyMapContext, LiteralKeyStringMapContext, StringKeyStringMapContext};
+pub use map::{AnyValue, DynAnyValue};
+pub use singleton::OptionContext;
 pub use unit::UnitContext;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ContextDepth {
-    All,
-    Shallowest,
-}
 
 pub trait AbstractContext: Default + Debug + Send + Sync {
     type Key;

@@ -3,4 +3,4 @@ pub mod converter;
 pub mod core;
 pub mod kind;
 
-pub use core::{AnyError, AnyErrorBuilder};
+pub use core::{AnyError, AnyErrorBuilder, ContextDepth};
