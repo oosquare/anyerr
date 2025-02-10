@@ -7,9 +7,9 @@ use std::error::Error;
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 use std::hash::Hash;
 
-use crate::error::context::{AbstractContext, Context, Entry};
-use crate::error::converter::Convertable;
-use crate::error::kind::Kind;
+use crate::context::{AbstractContext, Context, Entry};
+use crate::converter::Convertable;
+use crate::kind::Kind;
 
 use data::{ErrorData, ErrorDataBuilder};
 
@@ -147,7 +147,7 @@ where
 
 impl<C, K> AnyError<C, K>
 where
-    C: crate::error::context::SingletonContext,
+    C: crate::context::SingletonContext,
     K: Kind,
 {
     pub fn value(&self) -> Option<&<C::Entry as Entry>::ValueBorrowed> {
@@ -157,7 +157,7 @@ where
 
 impl<C, K> AnyError<C, K>
 where
-    C: crate::error::context::StringContext,
+    C: crate::context::StringContext,
     K: Kind,
 {
     pub fn get<Q>(&self, key: &Q) -> Option<&<C::Entry as Entry>::ValueBorrowed>
@@ -171,7 +171,7 @@ where
 
 impl<C, K> AnyError<C, K>
 where
-    C: crate::error::context::AnyContext,
+    C: crate::context::AnyContext,
     K: Kind,
 {
     pub fn value_as<T, Q>(&self, key: &Q) -> Option<&T>
@@ -290,8 +290,8 @@ where
 mod tests {
     use std::num::ParseIntError;
 
-    use crate::error::context::StringKeyStringMapContext;
-    use crate::error::kind::DefaultAnyErrorKind;
+    use crate::context::StringKeyStringMapContext;
+    use crate::kind::DefaultAnyErrorKind;
 
     use super::*;
 

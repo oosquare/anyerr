@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::error::context::{Entry, Iter};
+use crate::context::{Entry, Iter};
 
 #[derive(Debug)]
 pub enum CommonIter<'a, E, I>

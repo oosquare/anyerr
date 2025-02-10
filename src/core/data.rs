@@ -5,10 +5,10 @@ use std::error::Error;
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 use std::hash::Hash;
 
-use crate::error::context::{AbstractContext, Context, Entry, Iter};
-use crate::error::converter::Convertable;
-use crate::error::core::{AnyError, ContextDepth};
-use crate::error::kind::Kind;
+use crate::context::{AbstractContext, Context, Entry, Iter};
+use crate::converter::Convertable;
+use crate::core::{AnyError, ContextDepth};
+use crate::kind::Kind;
 
 #[derive(Debug)]
 pub enum ErrorData<C, K>
@@ -79,7 +79,7 @@ where
 
 impl<C, K> ErrorData<C, K>
 where
-    C: crate::error::context::SingletonContext,
+    C: crate::context::SingletonContext,
     K: Kind,
 {
     pub fn value(&self) -> Option<&<C::Entry as Entry>::ValueBorrowed> {
@@ -93,7 +93,7 @@ where
 
 impl<C, K> ErrorData<C, K>
 where
-    C: crate::error::context::StringContext,
+    C: crate::context::StringContext,
     K: Kind,
 {
     pub fn get<Q>(&self, key: &Q) -> Option<&<C::Entry as Entry>::ValueBorrowed>
@@ -111,7 +111,7 @@ where
 
 impl<C, K> ErrorData<C, K>
 where
-    C: crate::error::context::AnyContext,
+    C: crate::context::AnyContext,
     K: Kind,
 {
     pub fn value_as<T, Q>(&self, key: &Q) -> Option<&T>
@@ -231,9 +231,9 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::error::context::map::LiteralKeyStringMapEntry;
-    use crate::error::context::{Entry, LiteralKeyStringMapContext};
-    use crate::error::kind::DefaultAnyErrorKind;
+    use crate::context::map::LiteralKeyStringMapEntry;
+    use crate::context::{Entry, LiteralKeyStringMapContext};
+    use crate::kind::DefaultAnyErrorKind;
 
     use super::*;
 

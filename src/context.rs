@@ -8,7 +8,7 @@ use std::borrow::Borrow;
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
 
-use crate::error::converter::{Convertable, Converter};
+use crate::converter::{Convertable, Converter};
 
 pub use map::{AnyMapContext, LiteralKeyStringMapContext, StringKeyStringMapContext};
 pub use map::{AnyValue, DynAnyValue};

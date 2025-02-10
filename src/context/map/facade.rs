@@ -2,11 +2,9 @@ use std::borrow::Borrow;
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 use std::hash::Hash;
 
-use crate::error::context::{AbstractContext, AnyContext, Entry, Sealed, StringContext};
-use crate::error::converter::{BoxConverter, DebugConverter};
-
-use super::any::DynAnyValue;
-use super::{MapContext, MapEntry, MapIter};
+use crate::context::map::{DynAnyValue, MapContext, MapEntry, MapIter};
+use crate::context::{AbstractContext, AnyContext, Entry, Sealed, StringContext};
+use crate::converter::{BoxConverter, DebugConverter};
 
 pub type StringMapEntry<K, KB> = MapEntry<K, KB, String, str>;
 pub type StringMapContext<K, KB> = MapContext<StringMapEntry<K, KB>, DebugConverter>;
@@ -74,7 +72,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::error::context::Context;
+    use crate::context::Context;
 
     use super::*;
 

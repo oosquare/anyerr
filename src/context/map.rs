@@ -10,9 +10,9 @@ use std::hash::Hash;
 use std::marker::PhantomData;
 use std::slice::Iter as SliceIter;
 
-use crate::error::context::iter::CommonIter;
-use crate::error::context::{AbstractContext, Context, Entry};
-use crate::error::converter::Converter;
+use crate::context::iter::CommonIter;
+use crate::context::{AbstractContext, Context, Entry};
+use crate::converter::Converter;
 
 pub type MapIter<'a, E> = CommonIter<'a, E, SliceIter<'a, E>>;
 
@@ -180,8 +180,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::error::context::Iter;
-    use crate::error::converter::DebugConverter;
+    use crate::context::Iter;
+    use crate::converter::DebugConverter;
 
     use super::*;
 

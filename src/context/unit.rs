@@ -1,7 +1,7 @@
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::marker::PhantomData;
 
-use super::{AbstractContext, Entry, Iter, NoContext, Sealed};
+use crate::context::{AbstractContext, Entry, Iter, NoContext, Sealed};
 
 #[derive(Debug)]
 pub struct UnitContext;

@@ -1,9 +1,9 @@
-use crate::error::context::{AbstractContext, Context};
-use crate::error::converter::Convertable;
-use crate::error::core::AnyError;
-use crate::error::kind::Kind;
-use crate::error::overlay::error::IntermediateAnyError;
-use crate::error::overlay::{Applicable, Intermediate, Overlay};
+use crate::context::{AbstractContext, Context};
+use crate::converter::Convertable;
+use crate::core::AnyError;
+use crate::kind::Kind;
+use crate::overlay::error::IntermediateAnyError;
+use crate::overlay::{Applicable, Intermediate, Overlay};
 
 impl<T, C, K> Overlay for Result<T, AnyError<C, K>>
 where
@@ -82,8 +82,8 @@ where
 mod tests {
     use std::error::Error;
 
-    use crate::error::context::LiteralKeyStringMapContext;
-    use crate::error::kind::DefaultAnyErrorKind;
+    use crate::context::LiteralKeyStringMapContext;
+    use crate::kind::DefaultAnyErrorKind;
 
     use super::*;
 

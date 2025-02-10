@@ -23,9 +23,6 @@
         };
         rust = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
       in {
-        packages.rsudoku = pkgs.callPackage ./pkgs/rsudoku {};
-        packages.default = self'.packages.rsudoku;
-
         devShells.default = let
           mkShell = pkgs.mkShell.override { stdenv = pkgs.stdenvNoCC; };
         in

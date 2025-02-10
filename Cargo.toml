@@ -1,18 +1,7 @@
-[workspace]
-members = [
-  "src/rsudoku-domain",
-  "src/rsudoku-util"
-]
-resolver = "2"
-
-[workspace.package]
+[package]
+name = "anyerr"
 version = "0.1.0"
 edition = "2021"
-license = "GPL-3.0-or-later"
+license = "MIT"
 authors = ["Justin Chen oosquare@outlook.com"]
 repository = "https://github.com/oosquare/rsudoku"
-
-[workspace.dependencies]
-enum_dispatch = "0.3.13"
-getset = "0.1.4"
-snafu = "0.8.5"

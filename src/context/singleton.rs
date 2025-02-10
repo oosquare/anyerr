@@ -4,9 +4,9 @@ use std::hash::Hash;
 use std::marker::PhantomData;
 use std::option::Iter as InnerIter;
 
-use crate::error::context::iter::CommonIter;
-use crate::error::context::{AbstractContext, Context, Entry, Sealed, SingletonContext};
-use crate::error::converter::IntoConverter;
+use crate::context::iter::CommonIter;
+use crate::context::{AbstractContext, Context, Entry, Sealed, SingletonContext};
+use crate::converter::IntoConverter;
 
 pub type OptionIter<'a, E> = CommonIter<'a, E, InnerIter<'a, E>>;
 
@@ -184,7 +184,7 @@ impl Borrow<()> for OptionKey {
 
 #[cfg(test)]
 mod tests {
-    use crate::error::context::Iter;
+    use crate::context::Iter;
 
     use super::*;
 
