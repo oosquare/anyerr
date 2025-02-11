@@ -14,6 +14,7 @@ where
     type Intermediate = IntermediateAnyError<C, K>;
 }
 
+/// The final [`AnyError`] in a intermediate state.
 pub struct IntermediateAnyError<C, K>
 where
     C: AbstractContext,
@@ -61,6 +62,8 @@ where
 {
     type Output = IntermediateAnyError<C, K>;
 
+    /// Makes a new [`IntermediateAnyError`] which wraps `target` and sets
+    /// its error message to `self`.
     fn apply(self, target: AnyError<C, K>) -> Self::Output {
         AnyError::builder().message(self).source(target).into()
     }
@@ -73,6 +76,8 @@ where
 {
     type Output = IntermediateAnyError<C, K>;
 
+    /// Makes a new [`IntermediateAnyError`] which wraps `target` and sets
+    /// its error message to `self`.
     fn apply(self, target: AnyError<C, K>) -> Self::Output {
         AnyError::builder().message(self).source(target).into()
     }
@@ -86,6 +91,8 @@ where
 {
     type Output = IntermediateAnyError<C, K>;
 
+    /// Makes a new [`IntermediateAnyError`] which wraps `target` and sets
+    /// its error message and error kind to `self`'s corresponding components.
     fn apply(self, target: AnyError<C, K>) -> Self::Output {
         AnyError::builder()
             .message(self.0)
@@ -104,6 +111,8 @@ where
 {
     type Output = IntermediateAnyError<C, K>;
 
+    /// Add context information represented as a key-value pairs to `target`
+    /// using `self`'s components.
     fn apply(self, target: IntermediateAnyError<C, K>) -> Self::Output {
         target.builder.context(self.0, self.1).into()
     }

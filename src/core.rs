@@ -433,16 +433,12 @@ pub enum ContextDepth {
 /// # use anyerr::context::LiteralKeyStringMapContext;
 /// type AnyError = AnyErrorTemplate<LiteralKeyStringMapContext, DefaultErrorKind>;
 ///
-/// let inner = "-1".parse::<u32>().unwrap_err();
-/// let source = AnyError::wrap(inner);
-///
 /// let err = AnyError::builder()
 ///     .kind(DefaultErrorKind::ValueValidation)
 ///     .message("could not parse `&str` to `u32`")
 ///     .context("string", "-1")
 ///     .context("target-type", String::from("u32"))
 ///     .context("expected", -1)
-///     .source(source)
 ///     .build();
 ///
 /// assert_eq!(err.kind(), DefaultErrorKind::ValueValidation);

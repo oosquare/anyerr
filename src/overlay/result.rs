@@ -34,6 +34,7 @@ where
 {
     type Output = Result<T, IntermediateAnyError<C, K>>;
 
+    /// Delegates the parameters to [`AnyError`]'s implementation.
     fn apply(self, target: Result<T, AnyError<C, K>>) -> Self::Output {
         target.map_err(|err| err.overlay(self))
     }
@@ -46,6 +47,7 @@ where
 {
     type Output = Result<T, IntermediateAnyError<C, K>>;
 
+    /// Delegates the parameters to [`AnyError`]'s implementation.
     fn apply(self, target: Result<T, AnyError<C, K>>) -> Self::Output {
         target.map_err(|err| err.overlay(self))
     }
@@ -59,6 +61,7 @@ where
 {
     type Output = Result<T, IntermediateAnyError<C, K>>;
 
+    /// Delegates the parameters to [`AnyError`]'s implementation.
     fn apply(self, target: Result<T, AnyError<C, K>>) -> Self::Output {
         target.map_err(|err| err.overlay(self))
     }
@@ -73,6 +76,7 @@ where
 {
     type Output = Result<T, IntermediateAnyError<C, K>>;
 
+    /// Delegates the parameters to [`IntermediateAnyError`]'s implementation.
     fn apply(self, target: Result<T, IntermediateAnyError<C, K>>) -> Self::Output {
         target.map_err(|err| err.context(self.0, self.1))
     }
