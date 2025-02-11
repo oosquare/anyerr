@@ -6,6 +6,7 @@ use std::borrow::Borrow;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 use std::hash::Hash;
+use std::mem::{self, ManuallyDrop};
 
 use crate::context::{AbstractContext, Context, Entry};
 use crate::converter::Convertable;
@@ -170,19 +171,16 @@ where
     /// ```
     pub fn wrap<E>(err: E) -> Self
     where
-        E: Error + Any + Send + Sync,
+        E: Error + Any + Send + Sync + 'static,
     {
-        let err: Box<dyn ErrorAndAny> = Box::new(err);
-        if err.as_any().is::<Self>() {
-            *err.as_any_boxed()
-                .downcast::<Self>()
-                .expect("`err` should be `Box<Self>`")
+        if TypeId::of::<E>() == TypeId::of::<Self>() {
+            // SAFETY: we already checked `E` is actually `Self`
+            unsafe { mem::transmute_copy(&ManuallyDrop::new(err)) }
         } else {
-            let data = ErrorData::Wrapped {
+            Self::from(ErrorData::Wrapped {
                 backtrace: Backtrace::capture(),
-                inner: err.as_error_boxed(),
-            };
-            Self::from(data)
+                inner: Box::new(err),
+            })
         }
     }
 
@@ -242,12 +240,9 @@ where
     {
         match *self.0 {
             ErrorData::Simple { .. } | ErrorData::Layered { .. } => {
-                if self.is::<E>() {
-                    let boxed: Box<dyn Any> = Box::new(self);
-                    boxed
-                        .downcast::<E>()
-                        .map(|res| *res)
-                        .map_err(|_| unreachable!("`boxed` should be `Box<E>` (i.e. `Box<Self>`)"))
+                if TypeId::of::<E>() == TypeId::of::<Self>() {
+                    // SAFETY: it has been proved that `E` is actually `Self`
+                    Ok(unsafe { mem::transmute_copy(&ManuallyDrop::new(self)) })
                 } else {
                     Err(self)
                 }
@@ -267,8 +262,7 @@ where
     {
         match &*self.0 {
             ErrorData::Simple { .. } | ErrorData::Layered { .. } => {
-                let any: &dyn Any = self;
-                any.downcast_ref::<E>()
+                (self as &dyn Any).downcast_ref::<E>()
             }
             ErrorData::Wrapped { inner, .. } => inner.downcast_ref::<E>(),
         }
@@ -282,8 +276,7 @@ where
     {
         let use_inner = matches!(&*self.0, ErrorData::Wrapped { .. });
         if !use_inner {
-            let any: &mut dyn Any = self;
-            any.downcast_mut::<E>()
+            (self as &mut dyn Any).downcast_mut::<E>()
         } else {
             let ErrorData::Wrapped { inner, .. } = &mut *self.0 else {
                 unreachable!("`self.data` matches `ErrorData::Wrapped {{ .. }}`");
@@ -422,28 +415,6 @@ where
 pub enum ContextDepth {
     All,
     Shallowest,
-}
-
-trait ErrorAndAny: Error + Any + Send + Sync {
-    fn as_any(&self) -> &dyn Any;
-
-    fn as_any_boxed(self: Box<Self>) -> Box<dyn Any>;
-
-    fn as_error_boxed(self: Box<Self>) -> Box<dyn Error + Send + Sync + 'static>;
-}
-
-impl<E: Error + Any + Send + Sync> ErrorAndAny for E {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_boxed(self: Box<Self>) -> Box<dyn Any> {
-        self
-    }
-
-    fn as_error_boxed(self: Box<Self>) -> Box<dyn Error + Send + Sync + 'static> {
-        self
-    }
 }
 
 /// The builder of [`AnyError`].
