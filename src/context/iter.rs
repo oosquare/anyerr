@@ -26,6 +26,7 @@ where
 
     fn append(&mut self, other: Self) {
         if matches!(other, Self::None) {
+            #[allow(clippy::needless_return)]
             return;
         } else if let Self::Node { next, .. } = self {
             if let Some(next) = next {
