@@ -12,7 +12,7 @@ use crate::converter::{Convertable, Converter};
 
 pub use map::{AnyMapContext, LiteralKeyStringMapContext, StringKeyStringMapContext};
 pub use map::{AnyValue, DynAnyValue};
-pub use singleton::OptionContext;
+pub use singleton::{AnySingletonContext, FixedSingletonContext, StringSingletonContext};
 pub use unit::UnitContext;
 
 pub trait AbstractContext: Default + Debug + Send + Sync + 'static {

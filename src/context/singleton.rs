@@ -1,3 +1,5 @@
+mod facade;
+
 use std::borrow::Borrow;
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 use std::hash::Hash;
@@ -7,6 +9,8 @@ use std::option::Iter as InnerIter;
 use crate::context::iter::CommonIter;
 use crate::context::{AbstractContext, Context, Entry, Sealed, SingletonContext};
 use crate::converter::IntoConverter;
+
+pub use facade::*;
 
 pub type OptionIter<'a, E> = CommonIter<'a, E, InnerIter<'a, E>>;
 

@@ -114,11 +114,11 @@ mod tests {
     use std::error::Error;
 
     use crate::context::LiteralKeyStringMapContext;
-    use crate::kind::DefaultAnyErrorKind;
+    use crate::kind::DefaultErrorKind;
 
     use super::*;
 
-    type ErrKind = DefaultAnyErrorKind;
+    type ErrKind = DefaultErrorKind;
     type DefaultAnyError = AnyError<LiteralKeyStringMapContext, ErrKind>;
 
     #[test]

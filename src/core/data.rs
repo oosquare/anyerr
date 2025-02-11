@@ -233,19 +233,18 @@ where
 mod tests {
     use crate::context::map::LiteralKeyStringMapEntry;
     use crate::context::{Entry, LiteralKeyStringMapContext};
-    use crate::kind::DefaultAnyErrorKind;
+    use crate::kind::DefaultErrorKind;
 
     use super::*;
 
-    type DefaultErrorData = ErrorData<LiteralKeyStringMapContext, DefaultAnyErrorKind>;
-    type DefaultErrorDataBuilder =
-        ErrorDataBuilder<LiteralKeyStringMapContext, DefaultAnyErrorKind>;
+    type DefaultErrorData = ErrorData<LiteralKeyStringMapContext, DefaultErrorKind>;
+    type DefaultErrorDataBuilder = ErrorDataBuilder<LiteralKeyStringMapContext, DefaultErrorKind>;
 
     #[test]
     fn error_data_message_succeeds() {
         {
             let data = DefaultErrorData::Simple {
-                kind: DefaultAnyErrorKind::Unknown,
+                kind: DefaultErrorKind::Unknown,
                 message: "simple".into(),
                 backtrace: Backtrace::capture(),
                 context: LiteralKeyStringMapContext::new(),
@@ -255,11 +254,11 @@ mod tests {
         }
         {
             let data = DefaultErrorData::Layered {
-                kind: DefaultAnyErrorKind::Unknown,
+                kind: DefaultErrorKind::Unknown,
                 message: "layered".into(),
                 context: LiteralKeyStringMapContext::new(),
                 source: AnyError::from(DefaultErrorData::Simple {
-                    kind: DefaultAnyErrorKind::Unknown,
+                    kind: DefaultErrorKind::Unknown,
                     message: "simple".into(),
                     backtrace: Backtrace::capture(),
                     context: LiteralKeyStringMapContext::new(),
@@ -282,7 +281,7 @@ mod tests {
     fn error_data_context_succeeds() {
         {
             let data = DefaultErrorData::Simple {
-                kind: DefaultAnyErrorKind::Unknown,
+                kind: DefaultErrorKind::Unknown,
                 message: "simple".into(),
                 backtrace: Backtrace::capture(),
                 context: LiteralKeyStringMapContext::from(vec![("key", "1")]),
@@ -304,11 +303,11 @@ mod tests {
         }
         {
             let data = DefaultErrorData::Layered {
-                kind: DefaultAnyErrorKind::Unknown,
+                kind: DefaultErrorKind::Unknown,
                 message: "layered".into(),
                 context: LiteralKeyStringMapContext::from(vec![("key2", "2")]),
                 source: AnyError::from(DefaultErrorData::Simple {
-                    kind: DefaultAnyErrorKind::Unknown,
+                    kind: DefaultErrorKind::Unknown,
                     message: "simple".into(),
                     backtrace: Backtrace::capture(),
                     context: LiteralKeyStringMapContext::from(vec![("key1", "1")]),
@@ -351,25 +350,25 @@ mod tests {
     fn error_data_builder_build() {
         {
             let data = DefaultErrorDataBuilder::new()
-                .kind(DefaultAnyErrorKind::ValueValidation)
+                .kind(DefaultErrorKind::ValueValidation)
                 .message("simple")
                 .context("key", "1")
                 .build(Backtrace::capture());
             assert!(matches!(data, ErrorData::Simple { .. }));
-            assert_eq!(data.kind(), DefaultAnyErrorKind::ValueValidation);
+            assert_eq!(data.kind(), DefaultErrorKind::ValueValidation);
         }
         {
             let data = DefaultErrorDataBuilder::new()
                 .message("layered")
                 .context("key", "1")
                 .source(AnyError::from(DefaultErrorData::Simple {
-                    kind: DefaultAnyErrorKind::Unknown,
+                    kind: DefaultErrorKind::Unknown,
                     message: "simple".into(),
                     backtrace: Backtrace::capture(),
                     context: LiteralKeyStringMapContext::from(vec![("key1", "1")]),
                 }))
                 .build(Backtrace::capture());
-            assert_eq!(data.kind(), DefaultAnyErrorKind::default());
+            assert_eq!(data.kind(), DefaultErrorKind::default());
             assert!(matches!(data, ErrorData::Layered { .. }));
         }
     }
