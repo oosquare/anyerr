@@ -14,8 +14,10 @@ use crate::context::iter::CommonIter;
 use crate::context::{AbstractContext, Context, Entry};
 use crate::converter::Converter;
 
+/// The iterator of [`MapContext`].
 pub type MapIter<'a, E> = CommonIter<'a, E, SliceIter<'a, E>>;
 
+/// The common implementation of all map-like contexts.
 #[derive(Debug, PartialEq, Eq)]
 pub struct MapContext<E: Entry, C: Converter> {
     entries: Vec<E>,
@@ -23,12 +25,9 @@ pub struct MapContext<E: Entry, C: Converter> {
 }
 
 impl<E: Entry, C: Converter> MapContext<E, C> {
+    /// Creates a new [`MapContext`].
     pub fn new() -> Self {
         Self::from(Vec::<E>::new())
-    }
-
-    pub fn iter(&self) -> MapIter<'_, E> {
-        self.entries.iter().into()
     }
 }
 
@@ -115,6 +114,8 @@ impl<E: Entry, C: Converter> Context for MapContext<E, C> {
     }
 }
 
+/// The common implementation of entries of map-like contexts, typically
+/// used by [`MapContext`].
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct MapEntry<K, KB, V, VB>
 where

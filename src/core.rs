@@ -359,8 +359,8 @@ where
     /// ```rust
     /// # use anyerr::AnyError as AnyErrorTemplate;
     /// # use anyerr::kind::DefaultErrorKind;
-    /// # use anyerr::context::AnyMapContext;
-    /// type AnyError = AnyErrorTemplate<AnyMapContext<String, str>, DefaultErrorKind>;
+    /// # use anyerr::context::StringKeyAnyMapContext;
+    /// type AnyError = AnyErrorTemplate<StringKeyAnyMapContext, DefaultErrorKind>;
     /// let err = AnyError::builder()
     ///     .message("err")
     ///     .context("&str", "value")

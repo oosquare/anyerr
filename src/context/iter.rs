@@ -2,6 +2,7 @@ use std::fmt::Debug;
 
 use crate::context::{Entry, Iter};
 
+/// The common iterator implementation of all insertable contexts.
 #[derive(Debug)]
 pub enum CommonIter<'a, E, I>
 where

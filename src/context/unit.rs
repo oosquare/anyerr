@@ -1,8 +1,12 @@
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::marker::PhantomData;
 
-use crate::context::{AbstractContext, Entry, Iter, NoContext, Sealed};
+use crate::context::{AbstractContext, Entry, Iter, NoContext};
 
+/// The context that stores nothing.
+///
+/// [`UnitContext`] is a ZST, thus integrating your error type with it leads to
+/// zero memory overhead.
 #[derive(Debug)]
 pub struct UnitContext;
 
@@ -26,10 +30,9 @@ impl AbstractContext for UnitContext {
     }
 }
 
-impl Sealed for UnitContext {}
-
 impl NoContext for UnitContext {}
 
+/// An uninhabit type, used as dummy keys or values.
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum Dummy {}
 
@@ -39,6 +42,7 @@ impl Display for Dummy {
     }
 }
 
+/// An uninhabit type, used as entries.
 #[derive(Debug)]
 pub enum DummyEntry {}
 
@@ -68,6 +72,7 @@ impl Entry for DummyEntry {
     }
 }
 
+/// The iterator of [`UnitContext`], producing nothing.
 #[derive(Debug, Default)]
 pub struct UnitIter<'a> {
     _phantom: PhantomData<&'a ()>,

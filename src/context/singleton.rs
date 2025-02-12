@@ -7,13 +7,14 @@ use std::marker::PhantomData;
 use std::option::Iter as InnerIter;
 
 use crate::context::iter::CommonIter;
-use crate::context::{AbstractContext, Context, Entry, Sealed, SingletonContext};
+use crate::context::{AbstractContext, Context, Entry, SingletonContext};
 use crate::converter::IntoConverter;
 
 pub use facade::*;
 
 pub type OptionIter<'a, E> = CommonIter<'a, E, InnerIter<'a, E>>;
 
+/// The common implementation of [`SingletonContext`].
 #[derive(Debug)]
 pub struct OptionContext<E>
 where
@@ -96,8 +97,6 @@ where
     }
 }
 
-impl<E> Sealed for OptionContext<E> where E: Entry<Key = OptionKey, KeyBorrowed = OptionKey> {}
-
 impl<E> SingletonContext for OptionContext<E>
 where
     E: Entry<Key = OptionKey, KeyBorrowed = OptionKey>,
@@ -107,6 +106,7 @@ where
     }
 }
 
+/// The entry used by [`OptionContext`].
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct OptionEntry<V, VB>
 where
@@ -160,6 +160,11 @@ where
     }
 }
 
+/// The key of [`OptionEntry`].
+///
+/// It's in fact equivlaent to the unit type, i.e. `()`, and conversions
+/// between `()` are also offered. Usually you just need to use `()` in where
+/// the key is expected.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct OptionKey;
 
