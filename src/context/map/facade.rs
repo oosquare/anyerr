@@ -2,7 +2,8 @@ use std::borrow::Borrow;
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 use std::hash::Hash;
 
-use crate::context::map::{DynAnyValue, MapContext, MapEntry, MapIter};
+use crate::context::any::DynAnyValue;
+use crate::context::map::{MapContext, MapEntry, MapIter};
 use crate::context::{AbstractContext, AnyContext, Entry, StringContext};
 use crate::converter::{BoxConverter, DebugConverter};
 
