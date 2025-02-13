@@ -11,14 +11,14 @@
 //! ## Key Features
 //!
 //! - **Error Composition**: Wrap and combine errors while preserving their
-//! original information and access the underlying errors if needed.
+//!   original information and access the underlying errors if needed.
 //! - **Customizable Error Kind**: Make use of predefined error kinds offered
-//! by this crate or define your own error kinds by implementing the [`Kind`]
-//! trait.
+//!   by this crate or define your own error kinds by implementing the [`Kind`]
+//!   trait.
 //! - **Contextual Data**: Attach rich context information to errors using
-//! different pluggable context types.
+//!   different pluggable context types.
 //! - **Backtrace Support**: Automatically captures backtraces for easier
-//! debugging.
+//!   debugging.
 //!
 //! ## Getting Started
 //!

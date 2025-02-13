@@ -12,8 +12,8 @@ use std::hash::Hash;
 use crate::converter::{Convertable, Converter};
 
 pub use any::{AnyValue, DynAnyValue};
-pub use map::{LiteralKeyStringMapContext, StringKeyStringMapContext};
 pub use map::{LiteralKeyAnyMapContext, StringKeyAnyMapContext};
+pub use map::{LiteralKeyStringMapContext, StringKeyStringMapContext};
 pub use singleton::{AnySingletonContext, FixedSingletonContext, StringSingletonContext};
 pub use unit::UnitContext;
 
