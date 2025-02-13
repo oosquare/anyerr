@@ -65,7 +65,7 @@ pub trait Overlay: Sized {
 /// The intermediate type helps attach additional context to the resulting
 /// overlay.
 ///
-/// The implementors of the [`Intermediate`] are produced by the [`Overlay`]
+/// Each implementors of the [`Intermediate`] are produced by the [`Overlay`]
 /// trait, and is only used as a temporary builder to add some optional context
 /// to the final output.
 pub trait Intermediate: Sized {

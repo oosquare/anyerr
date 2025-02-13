@@ -68,7 +68,7 @@ impl Kind for DefaultErrorKind {
     const UNKNOWN_KIND: Self = DefaultErrorKind::Unknown;
 }
 
-/// A predefined error kind that is used when no error kinds is needed.
+/// A predefined error kind that is used when no error kind is needed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum NoErrorKind {
     #[default]
