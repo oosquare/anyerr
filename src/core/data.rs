@@ -196,7 +196,7 @@ where
         self
     }
 
-    pub fn build(self, backtrace: Backtrace) -> ErrorData<C, K> {
+    pub fn build(self) -> ErrorData<C, K> {
         match self.source {
             Some(source) => ErrorData::Layered {
                 kind: self.kind,
@@ -207,7 +207,7 @@ where
             None => ErrorData::Simple {
                 kind: self.kind,
                 message: self.message,
-                backtrace,
+                backtrace: Backtrace::capture(),
                 context: self.context,
             },
         }
@@ -353,7 +353,7 @@ mod tests {
                 .kind(DefaultErrorKind::ValueValidation)
                 .message("simple")
                 .context("key", "1")
-                .build(Backtrace::capture());
+                .build();
             assert!(matches!(data, ErrorData::Simple { .. }));
             assert_eq!(data.kind(), DefaultErrorKind::ValueValidation);
         }
@@ -367,7 +367,7 @@ mod tests {
                     backtrace: Backtrace::capture(),
                     context: LiteralKeyStringMapContext::from(vec![("key1", "1")]),
                 }))
-                .build(Backtrace::capture());
+                .build();
             assert_eq!(data.kind(), DefaultErrorKind::default());
             assert!(matches!(data, ErrorData::Layered { .. }));
         }

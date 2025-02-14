@@ -475,7 +475,7 @@ where
 
     /// Returns the error with the provided data for each fields.
     pub fn build(self) -> AnyError<C, K> {
-        AnyError::from(self.0.build(Backtrace::capture()))
+        AnyError::from(self.0.build())
     }
 }
 
