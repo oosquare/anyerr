@@ -2,7 +2,7 @@
 //! flexibility, extensibility, and a ergonomic way to handle errors in Rust
 //! applications.
 //!
-//! This library provides a central `AnyError` type that can carry arbitrary
+//! This library provides a central [`AnyError`] type that can carry arbitrary
 //! error information, including a custom error kind, a backtrace, contextual
 //! data and so on. It enables developers to create error types composing
 //! different levels of errors without sacrificing the ability to preserve rich
@@ -19,6 +19,8 @@
 //!   different pluggable context types.
 //! - **Backtrace Support**: Automatically captures backtraces for easier
 //!   debugging.
+//! - **Error Reporting**: Customize and write formated and detailed error
+//!   message to `stdout`, loggers and so on.
 //!
 //! ## Getting Started
 //!
@@ -62,6 +64,7 @@
 //!
 //!     pub use anyerr::{Intermediate, Overlay}; // These are helper traits.
 //!     pub use anyerr::kind::DefaultErrorKind as ErrKind;
+//!     pub use anyerr::Report;
 //!
 //!     pub type AnyError = AnyErrorTemplate<LiteralKeyStringMapContext, ErrKind>;
 //!     pub type AnyResult<T> = Result<T, AnyError>;
@@ -81,6 +84,7 @@
 //! #
 //! #     pub use anyerr::{Intermediate, Overlay};
 //! #     pub use anyerr::kind::DefaultErrorKind as ErrKind;
+//! #     pub use anyerr::Report;
 //! #
 //! #     pub type AnyError = AnyErrorTemplate<LiteralKeyStringMapContext, ErrKind>;
 //! #     pub type AnyResult<T> = Result<T, AnyError>;
@@ -144,6 +148,7 @@
 //! #
 //! #     pub use anyerr::{Intermediate, Overlay};
 //! #     pub use anyerr::kind::DefaultErrorKind as ErrKind;
+//! #     pub use anyerr::Report;
 //! #
 //! #     pub type AnyError = AnyErrorTemplate<LiteralKeyStringMapContext, ErrKind>;
 //! #     pub type AnyResult<T> = Result<T, AnyError>;
@@ -210,6 +215,7 @@
 //! #
 //! #     pub use anyerr::{Intermediate, Overlay};
 //! #     pub use anyerr::kind::DefaultErrorKind as ErrKind;
+//! #     pub use anyerr::Report;
 //! #
 //! #     pub type AnyError = AnyErrorTemplate<LiteralKeyStringMapContext, ErrKind>;
 //! #     pub type AnyResult<T> = Result<T, AnyError>;
@@ -261,6 +267,148 @@
 //! }
 //! ```
 //!
+//! ### Error Reporting
+//!
+//! You might have the experience that you wrote the code which iterated over
+//! the error chain and formated causes. It's pretty tedious to manually and
+//! repeatly write such code. Therefore, this crate does this for you by
+//! providing [`Report`]. [`Report`] captures your function's result and then
+//! you can output the error report directly to terminals, loggers or whatever.
+//!
+//! ```rust
+//! # mod err {
+//! #     use anyerr::AnyError as AnyErrorTemplate;
+//! #     use anyerr::context::LiteralKeyStringMapContext;
+//! #
+//! #     pub use anyerr::{Intermediate, Overlay};
+//! #     pub use anyerr::kind::DefaultErrorKind as ErrKind;
+//! #     pub use anyerr::Report;
+//! #
+//! #     pub type AnyError = AnyErrorTemplate<LiteralKeyStringMapContext, ErrKind>;
+//! #     pub type AnyResult<T> = Result<T, AnyError>;
+//! # }
+//! #
+//! use err::*;
+//!
+//! fn source_error() -> AnyResult<()> {
+//!     let err = AnyError::builder()
+//!         .message("the source error is here")
+//!         .kind(ErrKind::InfrastructureFailure)
+//!         .context("key1", "value1")
+//!         .context("key2", "value2")
+//!         .build();
+//!     Err(err)
+//! }
+//!
+//! fn intermediate_error() -> AnyResult<()> {
+//!     source_error()
+//!         .overlay("the intermediate error is here")
+//!         .context("key3", "value3")?;
+//!     Ok(())
+//! }
+//!
+//! fn toplevel_error() -> AnyResult<()> {
+//!     intermediate_error()
+//!         .overlay("the toplevel error is here")?;
+//!     Ok(())
+//! }
+//!
+//! let report1 = Report::wrap(toplevel_error().unwrap_err()).pretty(false);
+//! let report2 = Report::capture(|| -> AnyResult<()> { toplevel_error() });
+//! println!("Error: {report1}");
+//! println!("{report2}");
+//! ```
+//!
+//! The output of `report1`:
+//!
+//! ```ignored,plain
+//! Error: (Unknown) the toplevel error is here: (Unknown) the intermediate error is here: (InfrastructureFailure) the source error is here [key3 = "value3", key1 = "value1", key2 = "value2"]
+//! ```
+//!
+//! The output of `report2`:
+//!
+//! ```ignored,plain
+//! Error:
+//!     (InfrastructureFailure) the toplevel error is here
+//! Caused by:
+//!     (Unknown) the intermediate error is here
+//!     [key3 = "value3"]
+//! Caused by:
+//!     (Unknown) the source error is here
+//!     [key1 = "value1", key2 = "value2"]
+//!
+//! Stack backtrace:
+//!   0: anyerr::core::data::ErrorDataBuilder<C,K>::build
+//!             at ./src/core/data.rs:210:28
+//!   1: anyerr::core::AnyErrorBuilder<C,K>::build
+//!             at ./src/core.rs:415:24
+//!   2: anyerr::source_error
+//!             at ./src/main.rs:18:15
+//!   3: anyerr::intermediate_error
+//!             at ./src/main.rs:28:5
+//!   4: anyerr::toplevel_error
+//!             at ./src/main.rs:35:5
+//!   5: anyerr::main::{{closure}}
+//!             at ./src/main.rs:40:43
+//!   6: anyerr::report::Report<C,K>::capture
+//!             at ./src/report.rs:52:15
+//!   7: anyerr::main
+//!             at ./src/main.rs:40:5
+//!    ...
+//! ```
+//!
+//! Using [`Report`] in `main()`'s returning position is also allowed:
+//!
+//! ```no_run,rust
+//! # mod err {
+//! #     use anyerr::AnyError as AnyErrorTemplate;
+//! #     use anyerr::context::LiteralKeyStringMapContext;
+//! #
+//! #     pub use anyerr::{Intermediate, Overlay};
+//! #     pub use anyerr::kind::DefaultErrorKind as ErrKind;
+//! #     pub use anyerr::Report;
+//! #
+//! #     pub type AnyError = AnyErrorTemplate<LiteralKeyStringMapContext, ErrKind>;
+//! #     pub type AnyResult<T> = Result<T, AnyError>;
+//! # }
+//! #
+//! use std::process::Termination;
+//! use err::*;
+//! #
+//! #  fn source_error() -> AnyResult<()> {
+//! #     let err = AnyError::builder()
+//! #         .message("the source error is here")
+//! #         .kind(ErrKind::InfrastructureFailure)
+//! #         .context("key1", "value1")
+//! #         .context("key2", "value2")
+//! #         .build();
+//! #     Err(err)
+//! # }
+//! #
+//! # fn intermediate_error() -> AnyResult<()> {
+//! #     source_error()
+//! #         .overlay("the intermediate error is here")
+//! #         .context("key3", "value3")?;
+//! #     Ok(())
+//! # }
+//! #
+//! # fn toplevel_error() -> AnyResult<()> {
+//! #     intermediate_error()
+//! #         .overlay("the toplevel error is here")?;
+//! #     Ok(())
+//! # }
+//!
+//! fn main() -> impl Termination {
+//!     Report::capture(|| {
+//!         toplevel_error()?;
+//!         Ok(())
+//!     })
+//! }
+//! ```
+//!
+//! For more information about error reporting customization, see the
+//! documentations of [`Report`].
+//!
 //! ## Advanced Usage
 //!
 //! ### Different Context Types
@@ -305,3 +453,4 @@ pub mod report;
 
 pub use core::AnyError;
 pub use overlay::{Intermediate, Overlay};
+pub use report::Report;

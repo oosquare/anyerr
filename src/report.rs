@@ -9,50 +9,82 @@ use crate::AnyError;
 
 use inner::ReportInner;
 
-pub struct Report<T, C, K>(ReportVariant<T, C, K>)
+/// An error reporter which displays data carried by an [`AnyError`].
+///
+/// [`Report`] captures your function's result, such as [`Result<(), AnyError>`],
+/// and displays the error message and other information if an error occurred.
+/// It can also be used as `main()`'s returned value, handling the process's
+/// termination by implementing the [`Termination`] trait.
+pub struct Report<C, K>(ReportVariant<C, K>)
 where
-    T: Termination,
     C: AbstractContext<Entry: Display>,
     K: Kind;
 
-impl<T, C, K> Report<T, C, K>
+impl<C, K> Report<C, K>
 where
-    T: Termination,
     C: AbstractContext<Entry: Display>,
     K: Kind,
 {
-    pub fn capture(func: impl FnOnce() -> Result<T, AnyError<C, K>>) -> Self {
+    /// Creates a [`Report`] with the given error inside.
+    pub fn wrap(error: AnyError<C, K>) -> Self {
+        error.into()
+    }
+
+    /// Captures the result of a given function and creates a [`Report`].
+    ///
+    /// # Example
+    ///
+    /// ```no_run,rust
+    /// # use std::process::Termination;
+    /// # use anyerr::AnyError as AnyErrorTemplate;
+    /// # use anyerr::kind::DefaultErrorKind;
+    /// # use anyerr::context::LiteralKeyStringMapContext;
+    /// # use anyerr::report::Report;
+    /// type AnyError = AnyErrorTemplate<LiteralKeyStringMapContext, DefaultErrorKind>;
+    ///
+    /// fn main() -> impl Termination {
+    ///     Report::capture(|| -> Result<(), AnyError> {
+    ///         Err(AnyError::minimal("an error occurred"))
+    ///     })
+    /// }
+    /// ```
+    pub fn capture(func: impl FnOnce() -> Result<(), AnyError<C, K>>) -> Self {
         match func() {
-            Ok(val) => Self(ReportVariant::Success(val)),
-            Err(err) => ReportInner::from(err).into(),
+            Ok(_) => Self(ReportVariant::Success),
+            Err(err) => err.into(),
         }
     }
 
+    /// Prints a pretty error report if `pretty` is `true`, otherwise prints
+    /// a compact error report in one line.
     pub fn pretty(self, pretty: bool) -> Self {
         match self.0 {
-            v @ ReportVariant::Success(_) => Self(v),
             ReportVariant::Failure(report) => report.pretty(pretty).into(),
+            v => Self(v),
         }
     }
 
+    /// Prints error kinds if `kind` is `true`.
     pub fn kind(self, kind: bool) -> Self {
         match self.0 {
-            v @ ReportVariant::Success(_) => Self(v),
             ReportVariant::Failure(report) => report.kind(kind).into(),
+            v => Self(v),
         }
     }
 
+    /// Prints the backtrace if `backtrace` is `true`.
     pub fn backtrace(self, backtrace: bool) -> Self {
         match self.0 {
-            v @ ReportVariant::Success(_) => Self(v),
             ReportVariant::Failure(report) => report.backtrace(backtrace).into(),
+            v => Self(v),
         }
     }
 
+    /// Prints the attached context if `context` is `true`.
     pub fn context(self, context: bool) -> Self {
         match self.0 {
-            v @ ReportVariant::Success(_) => Self(v),
             ReportVariant::Failure(report) => report.context(context).into(),
+            v => Self(v),
         }
     }
 
@@ -64,9 +96,8 @@ where
     }
 }
 
-impl<T, C, K> From<ReportInner<C, K>> for Report<T, C, K>
+impl<C, K> From<ReportInner<C, K>> for Report<C, K>
 where
-    T: Termination,
     C: AbstractContext<Entry: Display>,
     K: Kind,
 {
@@ -75,15 +106,24 @@ where
     }
 }
 
-impl<T, C, K> Termination for Report<T, C, K>
+impl<C, K> From<AnyError<C, K>> for Report<C, K>
 where
-    T: Termination,
+    C: AbstractContext<Entry: Display>,
+    K: Kind,
+{
+    fn from(error: AnyError<C, K>) -> Self {
+        Self(ReportVariant::Failure(ReportInner::from(error)))
+    }
+}
+
+impl<C, K> Termination for Report<C, K>
+where
     C: AbstractContext<Entry: Display>,
     K: Kind,
 {
     fn report(self) -> ExitCode {
         match self.0 {
-            ReportVariant::Success(val) => val.report(),
+            ReportVariant::Success => ExitCode::SUCCESS,
             ReportVariant::Failure(report) => {
                 eprintln!("{report}");
                 ExitCode::FAILURE
@@ -92,9 +132,8 @@ where
     }
 }
 
-impl<T, C, K> Debug for Report<T, C, K>
+impl<C, K> Debug for Report<C, K>
 where
-    T: Termination,
     C: AbstractContext<Entry: Display>,
     K: Kind,
 {
@@ -103,9 +142,8 @@ where
     }
 }
 
-impl<T, C, K> Display for Report<T, C, K>
+impl<C, K> Display for Report<C, K>
 where
-    T: Termination,
     C: AbstractContext<Entry: Display>,
     K: Kind,
 {
@@ -114,12 +152,11 @@ where
     }
 }
 
-enum ReportVariant<T, C, K>
+enum ReportVariant<C, K>
 where
-    T: Termination,
     C: AbstractContext<Entry: Display>,
     K: Kind,
 {
-    Success(T),
+    Success,
     Failure(ReportInner<C, K>),
 }

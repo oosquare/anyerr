@@ -32,71 +32,8 @@ use data::{ErrorData, ErrorDataBuilder};
 ///
 /// A leaf [`AnyError`] can be instantiated with associative functions or its
 /// builder through [`AnyError::builder()`], while an intermediate [`AnyError`]
-/// which contains another error is often produced with the usage of the
+/// which contains another error is often produced by the builder or the
 /// [`Overlay`] trait.
-///
-/// When using [`AnyError`] in your own crate, the recommanded way is to define
-/// your specific error kind implementing the [`Kind`] trait and choose a
-/// context container which typically implements the [`Context`] trait and then
-/// make a type alias for the concrete [`AnyError`] type. The following example
-/// shows this:
-///
-/// ```rust
-/// use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
-///
-/// use anyerr::{AnyError as AnyErrorTemplate, Overlay};
-/// use anyerr::context::LiteralKeyStringMapContext;
-/// use anyerr::kind::Kind;
-///
-/// #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-/// #[non_exhaustive]
-/// pub enum ErrKind {
-///     ValueValidation,
-///     RuleViolation,
-///     InfrastructureFailure,
-///     EntityAbsence,
-///     Raw,
-///     #[default]
-///     Unknown,
-/// }
-///
-/// impl Display for ErrKind {
-///     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-///         let value = match self {
-///             Self::ValueValidation => "ValueValidation",
-///             Self::RuleViolation => "RuleViolation",
-///             Self::EntityAbsence => "EntityAbsence",
-///             Self::InfrastructureFailure => "InfrastructureFailure",
-///             Self::Raw => "Raw",
-///             Self::Unknown => "Unknown",
-///         };
-///         write!(f, "{value}")
-///     }
-/// }
-///
-/// impl Kind for ErrKind {
-///     const RAW_KIND: Self = Self::Raw;
-///     const UNKNOWN_KIND: Self = Self::Unknown;
-/// }
-///
-/// pub type AnyError = AnyErrorTemplate<LiteralKeyStringMapContext, ErrKind>;
-///
-/// fn parse_int(text: &str) -> Result<i32, AnyError> {
-///     text.parse::<i32>().map_err(AnyError::wrap)
-/// }
-///
-/// fn do_parsing() -> Result<(), AnyError> {
-///     let res = parse_int("not i32").overlay("failed to parse the text")?;
-///     println!("Got an `i32`: {res}");
-///     Ok(())
-/// }
-///
-/// fn main() {
-///     if let Err(err) = do_parsing() {
-///         eprintln!("Error: {err}");
-///     }
-/// }
-/// ```
 ///
 /// [`Overlay`]: `crate::overlay::Overlay`
 #[derive(Debug)]

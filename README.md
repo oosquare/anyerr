@@ -8,6 +8,7 @@
 - **Customizable Error Kinds**: Use predefined error kinds or create your own.
 - **Contextual Data Support**: Attach rich, structured context to your errors for better debugging.
 - **Backtrace Support**: Automatically captures backtraces to simplify error diagnosis.
+- **Error Reporting**: Customize and write formated and detailed error message to `stdout`, loggers and so on.
 
 ## Installation
 
@@ -99,6 +100,8 @@ fn parse_i32(input: &str) -> AnyResult<i32> {
 Using `AnyError` is also rather straightforward.
 
 ```rust
+use err::*;
+
 fn main() {
     let mut usernames = Vec::new();
 
@@ -118,6 +121,8 @@ fn main() {
 `AnyError` allows attaching chaining errors for better logging and easier debugging.
 
 ```rust
+use err::*;
+
 struct UserRepository {
     conn: Arc<Connection>,
 }
@@ -136,6 +141,76 @@ impl UserRepository {
         Ok(entity)
     }
 }
+```
+
+### Error Reporting
+
+Use `Report` to display a formated error message with details:
+
+```rust
+use err::*;
+
+fn source_error() -> AnyResult<()> {
+    let err = AnyError::builder()
+        .message("the source error is here")
+        .kind(ErrKind::InfrastructureFailure)
+        .context("key1", "value1")
+        .context("key2", "value2")
+        .build();
+    Err(err)
+}
+
+fn intermediate_error() -> AnyResult<()> {
+    source_error()
+        .overlay("the intermediate error is here")
+        .context("key3", "value3")?;
+    Ok(())
+}
+
+fn toplevel_error() -> AnyResult<()> {
+    intermediate_error()
+        .overlay("the toplevel error is here")?;
+    Ok(())
+}
+
+fn main() -> impl Termination {
+    Report::capture(|| {
+        toplevel_error()?;
+        Ok(())
+    })
+}
+```
+
+The expected output is
+
+```plain
+Error:
+    (Unknown) the toplevel error is here
+Caused by:
+    (Unknown) the intermediate error is here
+    [key3 = "value3"]
+Caused by:
+    (InfrastructureFailure) the source error is here
+    [key1 = "value1", key2 = "value2"]
+
+Stack backtrace:
+  0: anyerr::core::data::ErrorDataBuilder<C,K>::build
+            at ./src/core/data.rs:210:28
+  1: anyerr::core::AnyErrorBuilder<C,K>::build
+            at ./src/core.rs:415:24
+  2: anyerr::source_error
+            at ./src/main.rs:18:15
+  3: anyerr::intermediate_error
+            at ./src/main.rs:28:5
+  4: anyerr::toplevel_error
+            at ./src/main.rs:35:5
+  5: anyerr::main::{{closure}}
+            at ./src/main.rs:40:43
+  6: anyerr::report::Report<C,K>::capture
+            at ./src/report.rs:52:15
+  7: anyerr::main
+            at ./src/main.rs:40:5
+   ...
 ```
 
 ### Advanced Usage
