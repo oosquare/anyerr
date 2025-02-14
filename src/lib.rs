@@ -301,6 +301,7 @@ pub mod converter;
 pub mod core;
 pub mod kind;
 pub mod overlay;
+pub mod report;
 
-pub use core::{AnyError, ContextDepth};
+pub use core::AnyError;
 pub use overlay::{Intermediate, Overlay};
