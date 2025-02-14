@@ -12,13 +12,11 @@
 
 ## Installation
 
-`anyerr` is currently under active development, and a stable version will be published to [crates.io](https://crates.io) soon.
-
 Add `anyerr` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-anyerr = { git = "https://github.com/oosquare/anyerr.git" }
+anyerr = { git = "https://github.com/oosquare/anyerr" }
 ```
 
 ## Getting Started

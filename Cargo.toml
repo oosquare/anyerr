@@ -5,4 +5,4 @@ edition = "2021"
 license = "MIT"
 description = "Dynamic error library with rich error wrapping and context support"
 authors = ["Justin Chen oosquare@outlook.com"]
-repository = "https://github.com/oosquare/rsudoku"
+repository = "https://github.com/oosquare/anyerr"
