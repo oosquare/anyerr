@@ -8,7 +8,7 @@
 - **Customizable Error Kinds**: Use predefined error kinds or create your own.
 - **Contextual Data Support**: Attach rich, structured context to your errors for better debugging.
 - **Backtrace Support**: Automatically captures backtraces to simplify error diagnosis.
-- **Error Reporting**: Customize and write formated and detailed error message to `stdout`, loggers and so on.
+- **Error Reporting**: Customize and write formated and detailed error messages to `stdout`, loggers and so on.
 
 ## Installation
 
@@ -37,6 +37,7 @@ mod err {
 
     pub use anyerr::{Intermediate, Overlay};
     pub use anyerr::kind::DefaultErrorKind as ErrKind;
+    pub use anyerr::Report;
 
     pub type AnyError = AnyErrorTemplate<LiteralKeyStringMapContext, ErrKind>;
     pub type AnyResult<T> = Result<T, AnyError>;

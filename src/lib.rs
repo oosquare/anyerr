@@ -1,5 +1,5 @@
 //! `anyerr` is a comprehensive error handling library designed to offer
-//! flexibility, extensibility, and a ergonomic way to handle errors in Rust
+//! flexibility, extensibility, and an ergonomic way to handle errors in Rust
 //! applications.
 //!
 //! This library provides a central [`AnyError`] type that can carry arbitrary
@@ -20,7 +20,7 @@
 //! - **Backtrace Support**: Automatically captures backtraces for easier
 //!   debugging.
 //! - **Error Reporting**: Customize and write formated and detailed error
-//!   message to `stdout`, loggers and so on.
+//!   messages to `stdout`, loggers and so on.
 //!
 //! ## Getting Started
 //!
