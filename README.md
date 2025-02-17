@@ -1,5 +1,7 @@
 # `anyerr`
 
+[GitHub](https://github.com/oosquare/anyerr) | [Crates.io](https://crates.io/crates/anyerr) | [Docs.rs](https://docs.rs/anyerr)
+
 `anyerr` is a flexible and powerful error-handling library for Rust. It provides a highly customizable error type called `AnyError`, allowing you to capture and manage rich error information, including custom error kinds, backtraces, and contextual data.
 
 ## Features
@@ -16,7 +18,7 @@ Add `anyerr` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-anyerr = { git = "https://github.com/oosquare/anyerr" }
+anyerr = "0.1.1"
 ```
 
 ## Getting Started
@@ -215,6 +217,10 @@ Stack backtrace:
 ### Advanced Usage
 
 See API documentation for more features and advanced usages of different types in this crate.
+
+### Examples
+
+Please refer to example codes in the [examples](https://github.com/oosquare/anyerr/tree/main/examples) directory.
 
 ## License
 

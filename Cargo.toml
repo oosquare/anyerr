@@ -1,6 +1,6 @@
 [package]
 name = "anyerr"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 license = "MIT"
 description = "Dynamic error library with rich error wrapping and context support"
